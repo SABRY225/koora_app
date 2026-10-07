@@ -4,6 +4,7 @@ import '../../core/models/models.dart' as md;
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/draft_provider.dart';
 import '../../core/providers/app_state_provider.dart';
+import '../../core/providers/locale_provider.dart';
 import '../live_game/live_game_screen.dart';
 
 class DraftScreen extends StatefulWidget {
@@ -45,9 +46,9 @@ class _DraftScreenState extends State<DraftScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('GAME ROOM', style: Theme.of(context).textTheme.displayMedium?.copyWith(color: AppTheme.textMuted)),
+              Text(context.watch<LocaleProvider>().translate('GAME ROOM'), style: Theme.of(context).textTheme.displayMedium?.copyWith(color: AppTheme.textMuted)),
               const SizedBox(height: 16),
-              const Text('Waiting for players...', style: TextStyle(fontSize: 18)),
+              Text(context.watch<LocaleProvider>().translate('Waiting for players...'), style: const TextStyle(fontSize: 18)),
               const SizedBox(height: 32),
               const CircularProgressIndicator(color: AppTheme.primaryGreen),
             ],
@@ -81,7 +82,7 @@ class _DraftScreenState extends State<DraftScreen> {
       appBar: AppBar(
         title: Column(
           children: [
-            Text('SNAKE DRAFT', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
+            Text(context.watch<LocaleProvider>().translate('SNAKE DRAFT'), style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
             Text('${widget.match.homeTeam} vs ${widget.match.awayTeam}', style: const TextStyle(fontSize: 14)),
           ],
         ),
@@ -96,10 +97,10 @@ class _DraftScreenState extends State<DraftScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildUserStatus('TEAM 1', true), // Simplified for MVP
+                _buildUserStatus(context, 'TEAM 1', true), // Simplified for MVP
                 Column(
                   children: [
-                    Text('TURN ${draft.currentTurn}', style: const TextStyle(color: AppTheme.goldAccent, fontWeight: FontWeight.bold)),
+                    Text('${context.watch<LocaleProvider>().translate('TURN')} ${draft.currentTurn}', style: const TextStyle(color: AppTheme.goldAccent, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Text(
                       '${draft.timerSeconds}',
@@ -109,7 +110,7 @@ class _DraftScreenState extends State<DraftScreen> {
                     ),
                   ],
                 ),
-                _buildUserStatus('TEAM 2', false),
+                _buildUserStatus(context, 'TEAM 2', false),
               ],
             ),
           ),
@@ -151,7 +152,7 @@ class _DraftScreenState extends State<DraftScreen> {
               padding: const EdgeInsets.all(16.0),
               children: draft.availablePlayers
                   .where((p) => p.position == _selectedTab)
-                  .map((player) => _buildPlayerCard(player, draft, isMyTurn))
+                  .map((player) => _buildPlayerCard(context, player, draft, isMyTurn))
                   .toList(),
             ),
           )
@@ -160,7 +161,7 @@ class _DraftScreenState extends State<DraftScreen> {
     );
   }
 
-  Widget _buildUserStatus(String name, bool isActive) {
+  Widget _buildUserStatus(BuildContext context, String name, bool isActive) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -172,20 +173,23 @@ class _DraftScreenState extends State<DraftScreen> {
         children: [
           Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('Waiting...'),
+          Text(context.read<LocaleProvider>().translate('Waiting...')),
         ],
       ),
     );
   }
 
-  Widget _buildPlayerCard(md.FootballPlayer player, DraftProvider draft, bool isMyTurn) {
+  Widget _buildPlayerCard(BuildContext context, md.FootballPlayer player, DraftProvider draft, bool isMyTurn) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: AppTheme.surfaceCharcoal,
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppTheme.backgroundBlack,
-          child: Text(player.teamLogo, style: const TextStyle(fontSize: 10)),
+          backgroundColor: Colors.white,
+          backgroundImage: NetworkImage(player.teamLogo),
+          onBackgroundImageError: (exception, stackTrace) {
+            debugPrint('Failed to load player team logo: ${player.teamLogo}');
+          },
         ),
         title: Text(player.name, style: const TextStyle(color: AppTheme.textWhite)),
         subtitle: Text(player.teamName),
@@ -195,7 +199,7 @@ class _DraftScreenState extends State<DraftScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             minimumSize: const Size(80, 36),
           ),
-          child: draft.isLoading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('SELECT'),
+          child: draft.isLoading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(context.read<LocaleProvider>().translate('SELECT')),
         ),
       ),
     );

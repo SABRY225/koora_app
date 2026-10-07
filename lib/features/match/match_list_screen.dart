@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/models.dart' as md;
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/match_provider.dart';
+import '../../core/providers/locale_provider.dart';
 import 'match_details_screen.dart';
 
 class MatchListScreen extends StatefulWidget {
@@ -56,7 +57,14 @@ class _MatchListScreenState extends State<MatchListScreen> {
     List<md.Match> allMatches = matchProvider.allMatches;
     
     if (_selectedFilter != 'All') {
-      allMatches = allMatches.where((m) => m.competition.toLowerCase().contains(_selectedFilter.toLowerCase())).toList();
+      String searchFilter = _selectedFilter;
+      allMatches = allMatches.where((m) {
+        final compName = m.competition.toLowerCase();
+        if (searchFilter == 'Saudi Pro League') {
+          return compName.contains('saudi') || compName.contains('pro league') || compName.contains('spl');
+        }
+        return compName.contains(searchFilter.toLowerCase());
+      }).toList();
     }
 
     return Scaffold(
@@ -72,7 +80,7 @@ class _MatchListScreenState extends State<MatchListScreen> {
               elevation: 0,
               automaticallyImplyLeading: false,
               title: Text(
-                'MATCHES',
+                context.watch<LocaleProvider>().translate('MATCHES'),
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -106,7 +114,7 @@ class _MatchListScreenState extends State<MatchListScreen> {
                               ),
                             ),
                             child: Text(
-                              filter,
+                              context.watch<LocaleProvider>().translate(filter),
                               style: GoogleFonts.inter(
                                 color: isSelected ? AppTheme.backgroundBlack : AppTheme.textMuted,
                                 fontWeight: FontWeight.bold,
@@ -193,7 +201,7 @@ class _MatchListScreenState extends State<MatchListScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${match.liveMinute}\' LIVE',
+                              '${match.liveMinute}\' ${context.read<LocaleProvider>().translate('LIVE')}',
                               style: GoogleFonts.inter(
                                 color: AppTheme.primaryGreen,
                                 fontSize: 10,
@@ -262,7 +270,7 @@ class _MatchListScreenState extends State<MatchListScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     child: Text(
-                      'VIEW DRAFT',
+                      context.read<LocaleProvider>().translate('VIEW DRAFT'),
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -287,6 +295,7 @@ class _MatchListScreenState extends State<MatchListScreen> {
             radius: 28,
             backgroundColor: Colors.white,
             backgroundImage: NetworkImage(logo),
+            onBackgroundImageError: (_, __) {},
           ),
           const SizedBox(height: 12),
           Text(

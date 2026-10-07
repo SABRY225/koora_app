@@ -28,7 +28,11 @@ class AppStateProvider extends ChangeNotifier {
         username: data['username'] ?? 'Player',
         avatarUrl: data['avatarUrl'] ?? 'https://api.dicebear.com/7.x/avataaars/png?seed=${data['username']}',
         coins: wallet['balance'] ?? data['coins'] ?? 0,
-        globalRank: stats['rankPosition'] ?? data['globalRank'] ?? 0,
+        globalRank: (stats['rankPosition'] != null && (stats['rankPosition'] as num) > 0)
+            ? (stats['rankPosition'] as num).toInt()
+            : ((data['globalRank'] != null && (data['globalRank'] as num) > 0)
+                ? (data['globalRank'] as num).toInt()
+                : 1),
         rankingPoints: stats['rankingPoints'] ?? data['rankingPoints'] ?? 1000,
         totalGames: stats['gamesPlayed'] ?? data['totalGames'] ?? 0,
         wins: stats['gamesWon'] ?? data['wins'] ?? 0,
@@ -43,39 +47,21 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addCoins(int amount) {
+  /// Updates coins locally for immediate UI feedback using the backend's
+  /// authoritative balance. Always prefer this over manual arithmetic.
+  void updateCoinsOptimistically(int newBalance) {
     if (_currentUser == null) return;
     _currentUser = User(
       id: _currentUser!.id,
       username: _currentUser!.username,
       avatarUrl: _currentUser!.avatarUrl,
-      coins: _currentUser!.coins + amount,
+      coins: newBalance,
       globalRank: _currentUser!.globalRank,
       rankingPoints: _currentUser!.rankingPoints,
       totalGames: _currentUser!.totalGames,
       wins: _currentUser!.wins,
-      totalCoinsEarned: _currentUser!.totalCoinsEarned + amount,
+      totalCoinsEarned: _currentUser!.totalCoinsEarned,
     );
     notifyListeners();
-  }
-
-  bool deductCoins(int amount) {
-    if (_currentUser == null) return false;
-    if (_currentUser!.coins >= amount) {
-      _currentUser = User(
-        id: _currentUser!.id,
-        username: _currentUser!.username,
-        avatarUrl: _currentUser!.avatarUrl,
-        coins: _currentUser!.coins - amount,
-        globalRank: _currentUser!.globalRank,
-        rankingPoints: _currentUser!.rankingPoints,
-        totalGames: _currentUser!.totalGames,
-        wins: _currentUser!.wins,
-        totalCoinsEarned: _currentUser!.totalCoinsEarned,
-      );
-      notifyListeners();
-      return true;
-    }
-    return false;
   }
 }

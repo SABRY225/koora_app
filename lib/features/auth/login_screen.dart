@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/locale_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../main/main_screen.dart';
 import 'register_screen.dart';
@@ -50,8 +51,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter email and password'),
+        SnackBar(
+          content: Text(context.read<LocaleProvider>().translate('Please enter email and password')),
           backgroundColor: AppTheme.errorRed,
         ),
       );
@@ -173,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       Text(
-                        'WELCOME',
+                        context.watch<LocaleProvider>().translate('WELCOME'),
                         style: GoogleFonts.oswald(
                           fontSize: 56,
                           fontWeight: FontWeight.bold,
@@ -182,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       Text(
-                        'BACK',
+                        context.watch<LocaleProvider>().translate('BACK'),
                         style: GoogleFonts.oswald(
                           fontSize: 56,
                           fontWeight: FontWeight.bold,
@@ -192,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Enter the arena.',
+                        context.watch<LocaleProvider>().translate('Enter the arena.'),
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           color: AppTheme.textMuted,
@@ -205,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Email Field
                 _buildInputField(
-                  label: 'Email',
+                  label: context.watch<LocaleProvider>().translate('Email'),
                   hint: 'player@ufl.com',
                   icon: Icons.email_outlined,
                   controller: _emailController,
@@ -214,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // Password Field
                 _buildInputField(
-                  label: 'Password',
+                  label: context.watch<LocaleProvider>().translate('Password'),
                   hint: '••••••••',
                   icon: Icons.lock_outline,
                   controller: _passwordController,
@@ -232,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
-                      'Forgot Password?',
+                      context.watch<LocaleProvider>().translate('Forgot Password?'),
                       style: GoogleFonts.inter(
                         color: AppTheme.primaryGreen,
                         fontWeight: FontWeight.w600,
@@ -268,7 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  'LOGIN',
+                                  context.watch<LocaleProvider>().translate('LOGIN'),
                                   style: GoogleFonts.oswald(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -289,7 +290,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account? ",
+                      context.watch<LocaleProvider>().translate("Don't have an account? "),
                       style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 15),
                     ),
                     GestureDetector(
@@ -300,7 +301,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
                       },
                       child: Text(
-                        'Create Account',
+                        context.watch<LocaleProvider>().translate('Create Account'),
                         style: GoogleFonts.inter(
                           color: AppTheme.textWhite,
                           fontWeight: FontWeight.bold,

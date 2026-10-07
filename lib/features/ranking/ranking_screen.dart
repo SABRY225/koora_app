@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/ranking_provider.dart';
+import '../../core/providers/locale_provider.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -45,7 +46,7 @@ class _RankingScreenState extends State<RankingScreen> {
               elevation: 0,
               automaticallyImplyLeading: false,
               title: Text(
-                'GLOBAL RANKING',
+                context.watch<LocaleProvider>().translate('GLOBAL RANKING'),
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -87,6 +88,9 @@ class _RankingScreenState extends State<RankingScreen> {
                     child: CircleAvatar(
                       radius: 24,
                       backgroundImage: NetworkImage(ranking.myRank!.avatarUrl),
+                      onBackgroundImageError: (exception, stackTrace) {
+                        debugPrint('Failed to load myRank avatar: ${ranking.myRank!.avatarUrl}');
+                      },
                       backgroundColor: AppTheme.surfaceCharcoal,
                     ),
                   ),
@@ -96,7 +100,7 @@ class _RankingScreenState extends State<RankingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'YOUR RANK',
+                          context.watch<LocaleProvider>().translate('YOUR RANK'),
                           style: GoogleFonts.inter(
                             color: AppTheme.primaryGreen,
                             fontSize: 10,
@@ -129,7 +133,7 @@ class _RankingScreenState extends State<RankingScreen> {
                         ),
                       ),
                       Text(
-                        '${ranking.myRank!.rankingPoints.toInt()} PTS',
+                        '${ranking.myRank!.rankingPoints.toInt()} ${context.watch<LocaleProvider>().translate('PTS')}',
                         style: GoogleFonts.inter(
                           color: AppTheme.textMuted,
                           fontSize: 12,
@@ -187,6 +191,9 @@ class _RankingScreenState extends State<RankingScreen> {
                             radius: 20,
                             backgroundColor: AppTheme.backgroundBlack,
                             backgroundImage: NetworkImage(entry.avatarUrl),
+                            onBackgroundImageError: (exception, stackTrace) {
+                              debugPrint('Failed to load entry avatar: ${entry.avatarUrl}');
+                            },
                           ),
                         ],
                       ),
@@ -199,7 +206,7 @@ class _RankingScreenState extends State<RankingScreen> {
                         ),
                       ),
                       trailing: Text(
-                        '${entry.rankingPoints.toInt()} PTS',
+                        '${entry.rankingPoints.toInt()} ${context.watch<LocaleProvider>().translate('PTS')}',
                         style: GoogleFonts.inter(
                           color: AppTheme.primaryGreen,
                           fontWeight: FontWeight.bold,

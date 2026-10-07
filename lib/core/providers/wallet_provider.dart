@@ -60,23 +60,20 @@ class WalletProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Simulate ad reward and sync with backend (assuming a POST endpoint to add coins exists, 
-  // if not, we can just hit /me again or simulate locally depending on backend support)
-  // For now, we update local AppStateProvider.
   Future<void> addRewardCoins(int amount) async {
-    // If backend has an endpoint like /wallet/add, we call it here.
-    // For now we update AppStateProvider and maybe fake a transaction locally.
-    _appStateProvider.addCoins(amount);
-    _transactions.insert(
-      0, 
-      Transaction(
-        id: DateTime.now().millisecondsSinceEpoch.toString(), 
-        description: 'Ad Reward', 
-        amount: amount, 
-        type: 'CREDIT', 
-        createdAt: DateTime.now().toIso8601String()
-      )
-    );
-    notifyListeners();
+    try {
+      final response = await _apiService.post('/wallet/reward', {});
+      // Use the backend's authoritative balance for immediate UI update
+      final data = response['data'];
+      if (data != null && data['balance'] != null) {
+        _appStateProvider.updateCoinsOptimistically(data['balance']);
+      }
+      // Refresh transactions and user profile to fully sync with backend
+      await fetchTransactions();
+      await _appStateProvider.fetchUserProfile();
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+    }
   }
 }

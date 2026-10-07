@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/providers/locale_provider.dart';
 
 import '../home/home_screen.dart';
 // Placeholders for other screens
@@ -27,6 +29,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<LocaleProvider>();
     return Scaffold(
       extendBody: true,
       body: _screens[_currentIndex],
@@ -49,12 +52,12 @@ class _MainScreenState extends State<MainScreen> {
               _currentIndex = index;
             });
           },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
-            BottomNavigationBarItem(icon: Icon(Icons.sports_soccer), label: 'MATCHES'),
-            BottomNavigationBarItem(icon: Icon(Icons.leaderboard), label: 'RANKING'),
-            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'WALLET'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'PROFILE'),
+          items: [
+            BottomNavigationBarItem(icon: const Icon(Icons.home), label: locale.translate('HOME')),
+            BottomNavigationBarItem(icon: const Icon(Icons.sports_soccer), label: locale.translate('MATCHES')),
+            BottomNavigationBarItem(icon: const Icon(Icons.leaderboard), label: locale.translate('RANKING')),
+            BottomNavigationBarItem(icon: const Icon(Icons.account_balance_wallet), label: locale.translate('WALLET')),
+            BottomNavigationBarItem(icon: const Icon(Icons.person), label: locale.translate('PROFILE')),
           ],
         ),
       ),

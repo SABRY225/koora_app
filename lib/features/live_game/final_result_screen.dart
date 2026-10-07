@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/providers/locale_provider.dart';
 import '../main/main_screen.dart';
 
 class FinalResultScreen extends StatelessWidget {
@@ -22,10 +24,10 @@ class FinalResultScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('FULL TIME', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
+              Text(context.watch<LocaleProvider>().translate('FULL TIME'), style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
               const SizedBox(height: 32),
               
-              Text('FINAL RANKING', style: Theme.of(context).textTheme.displayLarge),
+              Text(context.watch<LocaleProvider>().translate('FINAL RANKING'), style: Theme.of(context).textTheme.displayLarge),
               const SizedBox(height: 48),
 
               // Winner / Your result
@@ -50,7 +52,7 @@ class FinalResultScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text('$myPoints POINTS', style: Theme.of(context).textTheme.displayMedium),
+                    Text('$myPoints ${context.watch<LocaleProvider>().translate('POINTS')}', style: Theme.of(context).textTheme.displayMedium),
                     const SizedBox(height: 32),
                     
                     Row(
@@ -58,14 +60,14 @@ class FinalResultScreen extends StatelessWidget {
                       children: [
                         Column(
                           children: [
-                            const Text('+ COINS', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                            Text(context.watch<LocaleProvider>().translate('+ COINS'), style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
                             const SizedBox(height: 4),
                             Text('$coinsWon', style: const TextStyle(color: AppTheme.goldAccent, fontWeight: FontWeight.bold, fontSize: 20)),
                           ],
                         ),
                         Column(
                           children: [
-                            const Text('+ RANKING', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                            Text(context.watch<LocaleProvider>().translate('+ RANKING'), style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
                             const SizedBox(height: 4),
                             Text('$rankPoints', style: const TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold, fontSize: 20)),
                           ],
@@ -89,9 +91,9 @@ class FinalResultScreen extends StatelessWidget {
                       (route) => false,
                     );
                   },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text('RETURN TO HOME', style: TextStyle(fontSize: 18)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(context.watch<LocaleProvider>().translate('RETURN TO HOME'), style: const TextStyle(fontSize: 18)),
                   ),
                 ),
               )

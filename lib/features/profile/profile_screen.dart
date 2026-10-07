@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/app_state_provider.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/locale_provider.dart';
+import '../../core/providers/wallet_provider.dart';
 import '../auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -20,15 +22,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppStateProvider>().fetchUserProfile();
+      context.read<WalletProvider>().fetchTransactions();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppStateProvider>();
+    final locale = context.watch<LocaleProvider>();
     final user = appState.currentUser;
 
-    if (appState.isLoading || user == null) {
+    if (appState.isLoading && user == null) {
       return const Scaffold(
         backgroundColor: AppTheme.backgroundBlack,
         body: Center(
@@ -36,6 +40,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     }
+
+    if (user == null && !appState.isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundBlack,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout, color: AppTheme.errorRed),
+              onPressed: () async {
+                await context.read<AuthProvider>().logout();
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Failed to load profile.',
+                style: GoogleFonts.inter(color: AppTheme.errorRed),
+              ),
+              ElevatedButton(
+                onPressed: () => context.read<AppStateProvider>().fetchUserProfile(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (user == null) return const SizedBox.shrink();
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
@@ -50,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               elevation: 0,
               automaticallyImplyLeading: false,
               title: Text(
-                'PROFILE',
+                locale.translate('PROFILE'),
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -59,6 +105,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.language, color: AppTheme.primaryGreen),
+                  onPressed: () {
+                    context.read<LocaleProvider>().toggleLanguage();
+                  },
+                ),
                 IconButton(
                   icon: const Icon(Icons.logout, color: AppTheme.errorRed),
                   onPressed: () async {
@@ -81,7 +133,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: AppTheme.primaryGreen,
         backgroundColor: AppTheme.surfaceCharcoal,
         onRefresh: () async {
-          await context.read<AppStateProvider>().fetchUserProfile();
+          await Future.wait([
+            context.read<AppStateProvider>().fetchUserProfile(),
+            context.read<WalletProvider>().fetchTransactions(),
+          ]);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -150,7 +205,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const Icon(Icons.emoji_events, color: AppTheme.goldAccent, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      'Global Rank: #${user.globalRank}',
+                      '${locale.translate('Global Rank')}: #${user.globalRank > 0 ? user.globalRank : 1}',
                       style: GoogleFonts.inter(
                         color: AppTheme.goldAccent,
                         fontWeight: FontWeight.bold,
@@ -167,20 +222,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
                   children: [
-                    Expanded(child: _buildStatCard(context, 'GAMES', '${user.totalGames}')),
+                    Expanded(child: _buildStatCard(context, locale.translate('GAMES'), '${user.totalGames}')),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildStatCard(context, 'WINS', '${user.wins}')),
+                    Expanded(child: _buildStatCard(context, locale.translate('WINS'), '${user.wins}')),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildStatCard(context, 'POINTS', '${user.rankingPoints}')),
+                    Expanded(child: _buildStatCard(context, locale.translate('POINTS'), '${user.rankingPoints}')),
                   ],
                 ),
               ),
 
               const SizedBox(height: 32),
 
+              // Coins Balance & Career Overview
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -193,30 +249,158 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppTheme.goldAccent.withOpacity(0.3)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.monetization_on, color: AppTheme.goldAccent),
-                        const SizedBox(width: 12),
+                        Row(
+                          children: [
+                            const Icon(Icons.account_balance_wallet, color: AppTheme.goldAccent, size: 24),
+                            const SizedBox(width: 12),
+                            Text(
+                              locale.translate('Current Balance'),
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textWhite,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
                         Text(
-                          'Total Coins Earned',
-                          style: GoogleFonts.inter(
+                          '${user.coins} ${locale.translate('COINS')}',
+                          style: GoogleFonts.oswald(
+                            color: AppTheme.goldAccent,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textWhite,
-                            fontSize: 16,
+                            fontSize: 24,
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    const Divider(color: Colors.white12, height: 1),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.military_tech, color: AppTheme.primaryGreen, size: 24),
+                            const SizedBox(width: 12),
+                            Text(
+                              locale.translate('Total Coins Earned'),
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textMuted,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '${user.totalCoinsEarned}',
+                          style: GoogleFonts.oswald(
+                            color: AppTheme.textWhite,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Coins Sources Breakdown
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      '${user.totalCoinsEarned}',
-                      style: GoogleFonts.oswald(
-                        color: AppTheme.goldAccent,
+                      locale.translate('COINS BREAKDOWN'),
+                      style: GoogleFonts.inter(
+                        color: AppTheme.textMuted,
                         fontWeight: FontWeight.bold,
-                        fontSize: 24,
+                        letterSpacing: 1,
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Consumer<WalletProvider>(
+                      builder: (context, wallet, _) {
+                        if (wallet.transactions.isEmpty) {
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceCharcoal,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Center(
+                              child: Text(
+                                locale.translate('No transactions yet'),
+                                style: const TextStyle(color: AppTheme.textMuted),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: wallet.transactions.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final t = wallet.transactions[index];
+                            final isPositive = t.amount > 0;
+                            String title = locale.translate(t.type);
+                            if (title == t.type) {
+                              title = locale.translate(t.description);
+                            }
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: AppTheme.surfaceCharcoal,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        isPositive ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                        color: isPositive ? AppTheme.primaryGreen : AppTheme.errorRed,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        title,
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.textWhite,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    isPositive ? '+${t.amount}' : '${t.amount}',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: isPositive ? AppTheme.primaryGreen : AppTheme.errorRed,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ],
                 ),

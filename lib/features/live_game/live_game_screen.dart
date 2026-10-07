@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:provider/provider.dart';
 import '../../core/models/models.dart' as md;
 import '../../core/theme/app_theme.dart';
+import '../../core/providers/locale_provider.dart';
 import 'final_result_screen.dart';
 
 class LiveGameScreen extends StatefulWidget {
@@ -82,7 +84,7 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
               children: [
                 const Icon(Icons.circle, color: AppTheme.errorRed, size: 10),
                 const SizedBox(width: 4),
-                Text('${widget.match.liveMinute} LIVE', style: const TextStyle(fontSize: 12, color: AppTheme.errorRed)),
+                Text('${widget.match.liveMinute} ${context.watch<LocaleProvider>().translate('LIVE')}', style: const TextStyle(fontSize: 12, color: AppTheme.errorRed)),
               ],
             ),
           ],
@@ -121,7 +123,7 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('TOTAL POINTS', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
+                    Text(context.watch<LocaleProvider>().translate('TOTAL POINTS'), style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
                     Text('$_totalPoints', style: Theme.of(context).textTheme.displayMedium?.copyWith(color: AppTheme.primaryGreen)),
                   ],
                 ),
@@ -138,7 +140,7 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
               children: [
                 const Icon(Icons.bolt, color: AppTheme.goldAccent),
                 const SizedBox(width: 8),
-                Text('LIVE FEED', style: Theme.of(context).textTheme.displaySmall),
+                Text(context.watch<LocaleProvider>().translate('LIVE FEED'), style: Theme.of(context).textTheme.displaySmall),
               ],
             ),
           ),
@@ -167,7 +169,7 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
                 padding: const EdgeInsets.all(16),
               ),
               onPressed: () => _showLiveRanking(context),
-              child: const Text('VIEW LIVE RANKING', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(context.watch<LocaleProvider>().translate('VIEW LIVE RANKING'), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -178,8 +180,11 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
   Widget _buildTeamLogo(String logo) {
     return CircleAvatar(
       radius: 30,
-      backgroundColor: AppTheme.backgroundBlack,
-      child: Text(logo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.textWhite)),
+      backgroundColor: Colors.white,
+      backgroundImage: NetworkImage(logo),
+      onBackgroundImageError: (exception, stackTrace) {
+        debugPrint('Failed to load team logo: $logo');
+      },
     );
   }
 
@@ -228,18 +233,19 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
       backgroundColor: AppTheme.backgroundBlack,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
+        final locale = ctx.watch<LocaleProvider>();
         return Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('LIVE RANKING', style: Theme.of(context).textTheme.displaySmall),
+              Text(locale.translate('LIVE RANKING'), style: Theme.of(context).textTheme.displaySmall),
               const SizedBox(height: 24),
-              _buildRankingRow('1st', 'Opponent1', 142, false),
-              _buildRankingRow('2nd', 'YOU', _totalPoints, true),
-              _buildRankingRow('3rd', 'Opponent2', 89, false),
-              _buildRankingRow('4th', 'Opponent3', 45, false),
+              _buildRankingRow(context, '1st', 'Opponent1', 142, false),
+              _buildRankingRow(context, '2nd', 'YOU', _totalPoints, true),
+              _buildRankingRow(context, '3rd', 'Opponent2', 89, false),
+              _buildRankingRow(context, '4th', 'Opponent3', 45, false),
             ],
           ),
         );
@@ -247,7 +253,7 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
     );
   }
 
-  Widget _buildRankingRow(String pos, String name, int points, bool isMe) {
+  Widget _buildRankingRow(BuildContext context, String pos, String name, int points, bool isMe) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -266,7 +272,7 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
               Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
-          Text('$points PTS', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text('$points ${context.read<LocaleProvider>().translate('PTS')}', style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );

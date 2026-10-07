@@ -6,6 +6,8 @@ import '../../core/providers/app_state_provider.dart';
 import '../../core/providers/match_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/models/models.dart' as md;
+import '../match/match_details_screen.dart';
+import '../../core/providers/locale_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -74,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'HOME',
+                    context.watch<LocaleProvider>().translate('HOME'),
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -139,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome back, ${user.username}.',
+                    '${context.watch<LocaleProvider>().translate('Welcome back')}, ${user.username}.',
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
@@ -149,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Your squad is ready for matchday.',
+                    context.watch<LocaleProvider>().translate('Your squad is ready for matchday.'),
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       color: AppTheme.textMuted,
@@ -175,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Live Now',
+                      context.watch<LocaleProvider>().translate('LIVE NOW'),
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -184,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Text(
-                      'VIEW ALL',
+                      context.watch<LocaleProvider>().translate('VIEW ALL'),
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -216,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text(
-                  'Upcoming Drafts',
+                  context.watch<LocaleProvider>().translate('UPCOMING DRAFTS'),
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -251,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No matches right now',
+                      context.watch<LocaleProvider>().translate('No matches right now'),
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -260,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Check back soon for upcoming drafts',
+                      context.watch<LocaleProvider>().translate('Check back soon for upcoming drafts'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppTheme.textMuted.withOpacity(0.6),
@@ -346,7 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'LIVE ${match.liveMinute}\'',
+                          '${context.read<LocaleProvider>().translate('LIVE')} ${match.liveMinute}\'',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -373,6 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             radius: 24,
                             backgroundColor: Colors.white,
                             backgroundImage: NetworkImage(match.homeLogo),
+                            onBackgroundImageError: (_, __) {},
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -409,6 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             radius: 24,
                             backgroundColor: Colors.white,
                             backgroundImage: NetworkImage(match.awayLogo),
+                            onBackgroundImageError: (_, __) {},
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -431,7 +435,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => MatchDetailsScreen(match: match)),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryGreen,
                       foregroundColor: AppTheme.surfaceObsidian,
@@ -439,7 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     child: Text(
-                      'JOIN GAME ROOM',
+                      context.read<LocaleProvider>().translate('JOIN GAME ROOM'),
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -457,9 +466,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildLiveMatchCard(BuildContext context, md.Match match) {
-    return Container(
-      width: 280,
-      padding: const EdgeInsets.all(16),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => MatchDetailsScreen(match: match)),
+        );
+      },
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceCharcoal,
         borderRadius: BorderRadius.circular(16),
@@ -505,6 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     radius: 16,
                     backgroundColor: Colors.white,
                     backgroundImage: NetworkImage(match.homeLogo),
+                    onBackgroundImageError: (_, __) {},
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -540,12 +557,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     radius: 16,
                     backgroundColor: Colors.white,
                     backgroundImage: NetworkImage(match.awayLogo),
+                    onBackgroundImageError: (_, __) {},
                   ),
                 ],
               ),
             ],
           ),
         ],
+      ),
       ),
     );
   }
@@ -561,9 +580,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildUpcomingCard(BuildContext context, md.Match match) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => MatchDetailsScreen(match: match)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
         color: AppTheme.surfaceCharcoal,
         borderRadius: BorderRadius.circular(16),
       ),
@@ -597,6 +623,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       radius: 12,
                       backgroundColor: Colors.white,
                       backgroundImage: NetworkImage(match.homeLogo),
+                      onBackgroundImageError: (_, __) {},
                     ),
                     const SizedBox(width: 6),
                     Flexible(
@@ -636,20 +663,29 @@ class _HomeScreenState extends State<HomeScreen> {
                       radius: 12,
                       backgroundColor: Colors.white,
                       backgroundImage: NetworkImage(match.awayLogo),
+                      onBackgroundImageError: (_, __) {},
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.backgroundBlack,
-              borderRadius: BorderRadius.circular(8),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => MatchDetailsScreen(match: match)),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.backgroundBlack,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: Text(
-              'DRAFT',
+              context.read<LocaleProvider>().translate('DRAFT'),
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -659,6 +695,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/app_state_provider.dart';
+import '../../core/providers/locale_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../main/main_screen.dart';
 
@@ -40,6 +42,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (mounted) {
           if (success) {
+            // Fetch user profile BEFORE showing dialog so coins are ready
+            await context.read<AppStateProvider>().fetchUserProfile();
+            
             // Show welcome dialog with 500 coins reward
             showDialog(
               context: context,
@@ -47,15 +52,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               builder: (ctx) => AlertDialog(
                 backgroundColor: AppTheme.surfaceCharcoal,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: const Text('Welcome to UFL!', style: TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold)),
+                title: Text(context.read<LocaleProvider>().translate('Welcome to UFL!'), style: const TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold)),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.monetization_on, size: 64, color: AppTheme.goldAccent),
                     const SizedBox(height: 16),
-                    const Text('You received your welcome bonus:', style: TextStyle(color: AppTheme.textWhite)),
+                    Text(context.read<LocaleProvider>().translate('You received your welcome bonus:'), style: const TextStyle(color: AppTheme.textWhite)),
                     const SizedBox(height: 8),
-                    const Text('500 COINS', style: TextStyle(color: AppTheme.goldAccent, fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text(context.read<LocaleProvider>().translate('500 COINS'), style: const TextStyle(color: AppTheme.goldAccent, fontSize: 24, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 actions: [
@@ -68,7 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         (route) => false,
                       );
                     },
-                    child: const Text('START PLAYING'),
+                    child: Text(context.read<LocaleProvider>().translate('START PLAYING')),
                   ),
                 ],
               ),
@@ -84,12 +89,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passwords do not match'), backgroundColor: AppTheme.errorRed),
+          SnackBar(content: Text(context.read<LocaleProvider>().translate('Passwords do not match')), backgroundColor: AppTheme.errorRed),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields'), backgroundColor: AppTheme.errorRed),
+        SnackBar(content: Text(context.read<LocaleProvider>().translate('Please fill all fields')), backgroundColor: AppTheme.errorRed),
       );
     }
   }
@@ -206,7 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _buildLogo(),
                     const SizedBox(height: 16),
                     Text(
-                      'JOIN THE LEAGUE',
+                      context.watch<LocaleProvider>().translate('JOIN THE LEAGUE'),
                       style: GoogleFonts.oswald(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -215,7 +220,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Create your profile to start competing in global\ntournaments.',
+                      context.watch<LocaleProvider>().translate('Create your profile to start competing in global\ntournaments.'),
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 13,
@@ -236,21 +241,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   children: [
                     _buildInputField(
-                      label: 'Username',
+                      label: context.watch<LocaleProvider>().translate('Username'),
                       hint: 'GamerTag99',
                       icon: Icons.person_outline,
                       controller: _usernameController,
                     ),
                     const SizedBox(height: 16),
                     _buildInputField(
-                      label: 'Email',
+                      label: context.watch<LocaleProvider>().translate('Email'),
                       hint: 'player@domain.com',
                       icon: Icons.email_outlined,
                       controller: _emailController,
                     ),
                     const SizedBox(height: 16),
                     _buildInputField(
-                      label: 'Password',
+                      label: context.watch<LocaleProvider>().translate('Password'),
                       hint: '••••••••',
                       icon: Icons.lock_outline,
                       controller: _passwordController,
@@ -258,7 +263,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildInputField(
-                      label: 'Confirm Password',
+                      label: context.watch<LocaleProvider>().translate('Confirm Password'),
                       hint: '••••••••',
                       icon: Icons.restore,
                       controller: _confirmPasswordController,
@@ -292,7 +297,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      'CREATE ACCOUNT',
+                                      context.watch<LocaleProvider>().translate('CREATE ACCOUNT'),
                                       style: GoogleFonts.oswald(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -335,7 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Welcome Bonus!',
+                            context.watch<LocaleProvider>().translate('Welcome Bonus!'),
                             style: GoogleFonts.inter(
                               color: AppTheme.textWhite,
                               fontWeight: FontWeight.bold,
@@ -372,7 +377,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Already have an account? ",
+                    context.watch<LocaleProvider>().translate("Already have an account? "),
                     style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 14),
                   ),
                   GestureDetector(
@@ -380,7 +385,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Navigator.pop(context);
                     },
                     child: Text(
-                      'Login here',
+                      context.watch<LocaleProvider>().translate('Login here'),
                       style: GoogleFonts.inter(
                         color: AppTheme.primaryGreen,
                         fontWeight: FontWeight.bold,
