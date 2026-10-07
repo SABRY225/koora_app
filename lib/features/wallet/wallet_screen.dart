@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/app_state_provider.dart';
@@ -27,6 +29,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
     if (user == null || walletProvider.isLoading) {
       return const Scaffold(
+        backgroundColor: AppTheme.backgroundBlack,
         body: Center(
           child: CircularProgressIndicator(color: AppTheme.primaryGreen),
         ),
@@ -34,14 +37,42 @@ class _WalletScreenState extends State<WalletScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('WALLET')),
+      backgroundColor: AppTheme.backgroundBlack,
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60.0),
+        child: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: AppBar(
+              backgroundColor: AppTheme.backgroundBlack.withOpacity(0.8),
+              elevation: 0,
+              automaticallyImplyLeading: false,
+              title: Text(
+                'WALLET',
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textWhite,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       body: user.coins == 0 ? _buildZeroCoinsState(context) : _buildWalletDashboard(context, user.coins, walletProvider.transactions),
     );
   }
 
   Widget _buildWalletDashboard(BuildContext context, int coins, List<Transaction> transactions) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 80,
+        left: 16,
+        right: 16,
+        bottom: 100,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -50,20 +81,45 @@ class _WalletScreenState extends State<WalletScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.surfaceCharcoal, AppTheme.backgroundBlack],
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.surfaceCharcoal,
+                  AppTheme.surfaceCharcoal.withOpacity(0.8),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: AppTheme.goldAccent.withOpacity(0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.goldAccent.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                )
+              ],
             ),
             child: Column(
               children: [
                 const Icon(Icons.monetization_on, size: 64, color: AppTheme.goldAccent),
                 const SizedBox(height: 16),
-                Text('$coins', style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 48, color: AppTheme.goldAccent)),
-                Text('COINS', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
+                Text(
+                  '$coins',
+                  style: GoogleFonts.oswald(
+                    fontSize: 64,
+                    color: AppTheme.goldAccent,
+                    fontWeight: FontWeight.bold,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  'COINS',
+                  style: GoogleFonts.inter(
+                    color: AppTheme.textMuted,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
               ],
             ),
           ),
@@ -77,27 +133,54 @@ class _WalletScreenState extends State<WalletScreen> {
               onPressed: () {
                 _simulateAdAndReward(context);
               },
-              icon: const Icon(Icons.play_circle_fill),
-              label: const Text('WATCH AD FOR +500 COINS'),
+              icon: const Icon(Icons.play_circle_fill, color: AppTheme.goldAccent),
+              label: Text(
+                'WATCH AD FOR +500 COINS',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                  color: AppTheme.textWhite,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppTheme.goldAccent.withOpacity(0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: AppTheme.goldAccent.withOpacity(0.05),
+              ),
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 48),
           
           // Transaction History
-          Text('TRANSACTION HISTORY', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
+          Text(
+            'TRANSACTION HISTORY',
+            style: GoogleFonts.inter(
+              color: AppTheme.textMuted,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
           const SizedBox(height: 16),
-          Expanded(
-            child: transactions.isEmpty
-                ? const Center(child: Text('No transactions yet', style: TextStyle(color: AppTheme.textMuted)))
-                : ListView.builder(
-                    itemCount: transactions.length,
-                    itemBuilder: (context, index) {
-                      final t = transactions[index];
-                      return _buildTransaction(t.description, t.type == 'CREDIT' ? t.amount : -t.amount);
-                    },
-                  ),
-          )
+          if (transactions.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Text('No transactions yet', style: TextStyle(color: AppTheme.textMuted)),
+              ),
+            )
+          else
+            ListView.separated(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: transactions.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final t = transactions[index];
+                return _buildTransaction(t.description, t.type == 'CREDIT' ? t.amount : -t.amount);
+              },
+            ),
         ],
       ),
     );
@@ -105,31 +188,60 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Widget _buildZeroCoinsState(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 80,
+        left: 24,
+        right: 24,
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.sentiment_dissatisfied, size: 80, color: AppTheme.textMuted),
           const SizedBox(height: 24),
-          Text("You're out of Coins", style: Theme.of(context).textTheme.displayMedium),
+          Text(
+            "You're out of Coins",
+            style: GoogleFonts.inter(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.textWhite,
+            ),
+          ),
           const SizedBox(height: 16),
           Text(
             'Watch a short video and get 500 Coins to play your next game.',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.textMuted),
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              color: AppTheme.textMuted,
+            ),
           ),
           const SizedBox(height: 32),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
               color: AppTheme.goldAccent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.goldAccent),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                Text('500 COINS', style: TextStyle(color: AppTheme.goldAccent, fontWeight: FontWeight.bold, fontSize: 24)),
-                Text('REWARD', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                Text(
+                  '500 COINS',
+                  style: GoogleFonts.oswald(
+                    color: AppTheme.goldAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                  ),
+                ),
+                Text(
+                  'REWARD',
+                  style: GoogleFonts.inter(
+                    color: AppTheme.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
               ],
             ),
           ),
@@ -140,9 +252,18 @@ class _WalletScreenState extends State<WalletScreen> {
               onPressed: () {
                 _simulateAdAndReward(context);
               },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Text('WATCH 30s AD', style: TextStyle(fontSize: 18)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.goldAccent,
+                foregroundColor: AppTheme.backgroundBlack,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                'WATCH 30s AD',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           )
@@ -154,7 +275,6 @@ class _WalletScreenState extends State<WalletScreen> {
   Widget _buildTransaction(String title, int amount) {
     final isPositive = amount > 0;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceCharcoal,
@@ -163,11 +283,20 @@ class _WalletScreenState extends State<WalletScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textWhite,
+              ),
+            ),
+          ),
           Text(
             isPositive ? '+$amount' : '$amount',
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontWeight: FontWeight.bold,
+              fontSize: 16,
               color: isPositive ? AppTheme.primaryGreen : AppTheme.errorRed,
             ),
           ),
@@ -178,7 +307,11 @@ class _WalletScreenState extends State<WalletScreen> {
 
   void _simulateAdAndReward(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Watching ad...'), duration: Duration(seconds: 2)),
+      SnackBar(
+        content: Text('Watching ad...', style: GoogleFonts.inter()),
+        backgroundColor: AppTheme.surfaceCharcoal,
+        duration: const Duration(seconds: 2),
+      ),
     );
     Future.delayed(const Duration(seconds: 2), () {
       if (context.mounted) {
@@ -187,14 +320,32 @@ class _WalletScreenState extends State<WalletScreen> {
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: AppTheme.surfaceCharcoal,
-            title: const Text('Reward Added!', style: TextStyle(color: AppTheme.goldAccent)),
-            content: const Text('+500 COINS\n\nYou are ready for your next game!', style: TextStyle(color: AppTheme.textWhite)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              'Reward Added!',
+              style: GoogleFonts.inter(
+                color: AppTheme.goldAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              '+500 COINS\n\nYou are ready for your next game!',
+              style: GoogleFonts.inter(
+                color: AppTheme.textWhite,
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                 },
-                child: const Text('AWESOME'),
+                child: Text(
+                  'AWESOME',
+                  style: GoogleFonts.inter(
+                    color: AppTheme.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),

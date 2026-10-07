@@ -20,20 +20,23 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final response = await _apiService.get('/me');
       final data = response['data'];
+      final wallet = data['wallet'] ?? {};
+      final stats = data['stats'] ?? {};
       
       _currentUser = User(
         id: data['id']?.toString() ?? '',
         username: data['username'] ?? 'Player',
         avatarUrl: data['avatarUrl'] ?? 'https://api.dicebear.com/7.x/avataaars/png?seed=${data['username']}',
-        coins: data['coins'] ?? 0,
-        globalRank: data['globalRank'] ?? 0,
-        rankingPoints: data['rankingPoints'] ?? 0,
-        totalGames: data['totalGames'] ?? 0,
-        wins: data['wins'] ?? 0,
-        totalCoinsEarned: data['totalCoinsEarned'] ?? 0,
+        coins: wallet['balance'] ?? data['coins'] ?? 0,
+        globalRank: stats['rankPosition'] ?? data['globalRank'] ?? 0,
+        rankingPoints: stats['rankingPoints'] ?? data['rankingPoints'] ?? 1000,
+        totalGames: stats['gamesPlayed'] ?? data['totalGames'] ?? 0,
+        wins: stats['gamesWon'] ?? data['wins'] ?? 0,
+        totalCoinsEarned: wallet['careerCoins'] ?? data['totalCoinsEarned'] ?? 0,
       );
     } catch (e) {
       _errorMessage = e.toString();
+      debugPrint('AppStateProvider fetchUserProfile error: $e');
     }
 
     _isLoading = false;

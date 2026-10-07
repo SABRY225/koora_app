@@ -22,7 +22,7 @@ class RankEntry {
       username: json['username'] ?? 'Player',
       avatarUrl: json['avatarUrl'] ?? 'https://api.dicebear.com/7.x/avataaars/png?seed=${json['username']}',
       rankingPoints: json['rankingPoints']?.toDouble() ?? 0.0,
-      globalRank: json['globalRank'] ?? 0,
+      globalRank: json['rank'] ?? json['globalRank'] ?? 0,
     );
   }
 }
@@ -49,8 +49,20 @@ class RankingProvider with ChangeNotifier {
       final leaderboardRes = await _apiService.get('/ranking');
       final myRankRes = await _apiService.get('/ranking/me');
 
-      _leaderboard = (leaderboardRes['data'] as List).map((e) => RankEntry.fromJson(e)).toList();
-      _myRank = RankEntry.fromJson(myRankRes['data']);
+      final leaderboardData = leaderboardRes['data'] ?? {};
+      final myRankData = myRankRes['data'] ?? {};
+
+      if (leaderboardData['leaderboard'] != null) {
+        _leaderboard = (leaderboardData['leaderboard'] as List)
+            .map((e) => RankEntry.fromJson(e))
+            .toList();
+      } else {
+        _leaderboard = [];
+      }
+
+      if (myRankData['userRank'] != null) {
+        _myRank = RankEntry.fromJson(myRankData['userRank']);
+      }
       
     } catch (e) {
       _errorMessage = e.toString();

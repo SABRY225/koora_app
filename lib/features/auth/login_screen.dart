@@ -205,9 +205,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Email Field
                 _buildInputField(
-                  label: 'Email or Phone',
+                  label: 'Email',
                   hint: 'player@ufl.com',
-                  icon: Icons.person_outline,
+                  icon: Icons.email_outlined,
                   controller: _emailController,
                 ),
                 const SizedBox(height: 20),

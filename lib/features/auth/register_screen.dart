@@ -36,7 +36,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           username: _usernameController.text,
           email: _emailController.text,
           password: _passwordController.text,
-          phone: '', // Phone is not in the form, sending empty or modify later
         );
 
         if (mounted) {

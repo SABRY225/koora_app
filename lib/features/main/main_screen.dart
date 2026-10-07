@@ -28,21 +28,35 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: _screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
-          BottomNavigationBarItem(icon: Icon(Icons.sports_soccer), label: 'MATCHES'),
-          BottomNavigationBarItem(icon: Icon(Icons.leaderboard), label: 'RANKING'),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'WALLET'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'PROFILE'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF131313).withOpacity(0.9),
+          border: const Border(top: BorderSide(color: Colors.white10, width: 1)),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          currentIndex: _currentIndex,
+          selectedItemColor: const Color(0xFF00FF41), // primaryGreen
+          unselectedItemColor: const Color(0xFFB9CCB2), // textMuted
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 10),
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
+            BottomNavigationBarItem(icon: Icon(Icons.sports_soccer), label: 'MATCHES'),
+            BottomNavigationBarItem(icon: Icon(Icons.leaderboard), label: 'RANKING'),
+            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'WALLET'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'PROFILE'),
+          ],
+        ),
       ),
     );
   }

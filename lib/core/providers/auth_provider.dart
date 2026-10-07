@@ -54,7 +54,6 @@ class AuthProvider with ChangeNotifier {
     required String username,
     required String email,
     required String password,
-    required String phone,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -65,7 +64,6 @@ class AuthProvider with ChangeNotifier {
         'username': username,
         'email': email,
         'password': password,
-        'phone': phone,
       });
 
       final data = response['data'] ?? {};
