@@ -187,9 +187,13 @@ class AdProvider with ChangeNotifier {
         filename: filename,
       );
 
+      final data = response['data'];
+      final uploadedUrl = (data is Map)
+          ? (data['videoUrl'] ?? data['url'])?.toString()
+          : null;
       _isUploading = false;
       notifyListeners();
-      return response['data']?['url'];
+      return uploadedUrl;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _isUploading = false;
