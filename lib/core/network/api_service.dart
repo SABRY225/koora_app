@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
 import '../utils/token_manager.dart';
 
 class ApiService {
@@ -11,6 +10,16 @@ class ApiService {
   // Use 10.0.2.2 for Android Emulator, localhost for iOS Simulator/Windows/Web
   static const String baseUrl = 'http://192.168.1.14:3000/api/v1';
   static const String socketUrl = 'http://192.168.1.14:3000';
+
+  static String resolveUrl(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    if (url.startsWith('/')) {
+      return '$socketUrl$url';
+    }
+    return '$socketUrl/$url';
+  }
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await TokenManager.getToken();
@@ -74,6 +83,46 @@ class ApiService {
       return _handleResponse(response);
     } catch (e) {
       throw Exception('Network error: $e');
+    }
+  }
+
+  Future<dynamic> uploadMultipart(
+    String endpoint, {
+    required String fieldName,
+    String? filePath,
+    List<int>? fileBytes,
+    String? filename,
+  }) async {
+    final url = Uri.parse('$baseUrl$endpoint');
+    final token = await TokenManager.getToken();
+    final request = http.MultipartRequest('POST', url);
+
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+
+    if (filePath != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        fieldName,
+        filePath,
+        filename: filename,
+      ));
+    } else if (fileBytes != null && filename != null) {
+      request.files.add(http.MultipartFile.fromBytes(
+        fieldName,
+        fileBytes,
+        filename: filename,
+      ));
+    } else {
+      throw Exception('Either fileBytes or filePath must be provided');
+    }
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception('Upload error: $e');
     }
   }
 

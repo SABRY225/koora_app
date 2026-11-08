@@ -8,6 +8,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/models/models.dart' as md;
 import '../match/match_details_screen.dart';
 import '../../core/providers/locale_provider.dart';
+import '../../core/services/sound_service.dart';
+import '../profile/widgets/avatar_selector_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,11 +33,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final appState = context.watch<AppStateProvider>();
     final matchProvider = context.watch<MatchProvider>();
 
-    final user = appState.currentUser;
+    final user = appState.currentUser ??
+        md.User(
+          id: '',
+          username: 'Player',
+          avatarUrl: 'assets/avatars/avatar_1.png',
+          coins: 500,
+          globalRank: 1,
+          rankingPoints: 1000,
+          totalGames: 0,
+          wins: 0,
+          totalCoinsEarned: 500,
+        );
     final liveMatches = matchProvider.liveMatches;
     final upcomingMatches = matchProvider.upcomingMatches;
 
-    if (appState.isLoading || matchProvider.isLoading || user == null) {
+    if (appState.isLoading && matchProvider.isLoading && appState.currentUser == null) {
       return const Scaffold(
         backgroundColor: AppTheme.backgroundBlack,
         body: Center(
@@ -112,16 +125,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(right: 16.0),
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AppTheme.surfaceCharcoal,
-                    backgroundImage: user.avatarUrl.isNotEmpty ? NetworkImage(user.avatarUrl) : null,
-                    child: user.avatarUrl.isEmpty
-                        ? Text(
-                            user.username.substring(0, 1).toUpperCase(),
-                            style: const TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold, fontSize: 14),
-                          )
-                        : null,
+                  child: GestureDetector(
+                    onTap: () {
+                      SoundService().playTap();
+                      AvatarSelectorSheet.show(context);
+                    },
+                    child: UserAvatarView(
+                      avatarUrl: user.avatarUrl,
+                      username: user.username,
+                      radius: 17,
+                      showGlow: false,
+                    ),
                   ),
                 ),
               ],
@@ -436,6 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
+                      SoundService().playTap();
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => MatchDetailsScreen(match: match)),

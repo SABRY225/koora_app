@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/ranking_provider.dart';
 import '../../core/providers/locale_provider.dart';
+import '../profile/widgets/avatar_selector_sheet.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -44,6 +46,12 @@ class _RankingScreenState extends State<RankingScreen> {
             child: AppBar(
               backgroundColor: AppTheme.backgroundBlack.withOpacity(0.8),
               elevation: 0,
+              leading: Navigator.canPop(context)
+                  ? IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.textWhite, size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    )
+                  : null,
               automaticallyImplyLeading: false,
               title: Text(
                 context.watch<LocaleProvider>().translate('GLOBAL RANKING'),
@@ -79,20 +87,11 @@ class _RankingScreenState extends State<RankingScreen> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primaryGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: CircleAvatar(
-                      radius: 24,
-                      backgroundImage: NetworkImage(ranking.myRank!.avatarUrl),
-                      onBackgroundImageError: (exception, stackTrace) {
-                        debugPrint('Failed to load myRank avatar: ${ranking.myRank!.avatarUrl}');
-                      },
-                      backgroundColor: AppTheme.surfaceCharcoal,
-                    ),
+                  UserAvatarView(
+                    avatarUrl: ranking.myRank!.avatarUrl,
+                    username: ranking.myRank!.username,
+                    radius: 24,
+                    showGlow: false,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -187,13 +186,11 @@ class _RankingScreenState extends State<RankingScreen> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: AppTheme.backgroundBlack,
-                            backgroundImage: NetworkImage(entry.avatarUrl),
-                            onBackgroundImageError: (exception, stackTrace) {
-                              debugPrint('Failed to load entry avatar: ${entry.avatarUrl}');
-                            },
+                          UserAvatarView(
+                            avatarUrl: entry.avatarUrl,
+                            username: entry.username,
+                            radius: 19,
+                            showGlow: false,
                           ),
                         ],
                       ),

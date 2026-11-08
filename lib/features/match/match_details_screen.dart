@@ -7,6 +7,7 @@ import '../../core/providers/locale_provider.dart';
 import '../../core/providers/app_state_provider.dart';
 import '../../core/providers/wallet_provider.dart';
 import '../draft/draft_screen.dart';
+import '../../core/services/sound_service.dart';
 
 class MatchDetailsScreen extends StatefulWidget {
   final md.Match match;
@@ -211,6 +212,8 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
           });
           return;
         }
+
+        SoundService().playWhistle();
 
         // 1. Create a Game Room for this fixture
         final createRes = await apiService.post('/games', {

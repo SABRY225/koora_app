@@ -10,6 +10,7 @@ class User {
   final int totalGames;
   final int wins;
   final int totalCoinsEarned;
+  final String role;
 
   User({
     required this.id,
@@ -21,7 +22,111 @@ class User {
     required this.totalGames,
     required this.wins,
     required this.totalCoinsEarned,
+    this.role = 'user',
   });
+
+  bool get isAdmin => role.toLowerCase() == 'admin';
+
+  String get winRate => totalGames > 0 ? ((wins / totalGames) * 100).toStringAsFixed(0) : '0';
+
+  User copyWith({
+    String? id,
+    String? username,
+    String? avatarUrl,
+    int? coins,
+    int? globalRank,
+    int? rankingPoints,
+    int? totalGames,
+    int? wins,
+    int? totalCoinsEarned,
+    String? role,
+  }) {
+    return User(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      coins: coins ?? this.coins,
+      globalRank: globalRank ?? this.globalRank,
+      rankingPoints: rankingPoints ?? this.rankingPoints,
+      totalGames: totalGames ?? this.totalGames,
+      wins: wins ?? this.wins,
+      totalCoinsEarned: totalCoinsEarned ?? this.totalCoinsEarned,
+      role: role ?? this.role,
+    );
+  }
+}
+
+class AdModel {
+  final String id;
+  final String title;
+  final String? description;
+  final String videoUrl;
+  final String? linkUrl;
+  final int rewardCoins;
+  final bool isActive;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final int viewsCount;
+  final int completionsCount;
+  final bool isExpired;
+  final bool isEffectiveActive;
+
+  AdModel({
+    required this.id,
+    required this.title,
+    this.description,
+    required this.videoUrl,
+    this.linkUrl,
+    this.rewardCoins = 500,
+    this.isActive = true,
+    this.startDate,
+    this.endDate,
+    this.viewsCount = 0,
+    this.completionsCount = 0,
+    this.isExpired = false,
+    this.isEffectiveActive = true,
+  });
+
+  factory AdModel.fromJson(Map<String, dynamic> json) {
+    final startStr = json['startDate'];
+    final endStr = json['endDate'];
+    final startDate = startStr != null ? DateTime.tryParse(startStr.toString()) : null;
+    final endDate = endStr != null ? DateTime.tryParse(endStr.toString()) : null;
+
+    final bool expired = json['isExpired'] ?? (endDate != null && DateTime.now().isAfter(endDate));
+    final bool active = json['isActive'] ?? true;
+    final bool effective = json['isEffectiveActive'] ??
+        (active && !expired && (startDate == null || DateTime.now().isAfter(startDate)));
+
+    return AdModel(
+      id: json['id']?.toString() ?? '',
+      title: json['title'] ?? '',
+      description: json['description'],
+      videoUrl: json['videoUrl'] ?? '',
+      linkUrl: json['linkUrl'],
+      rewardCoins: json['rewardCoins'] ?? 500,
+      isActive: active,
+      startDate: startDate,
+      endDate: endDate,
+      viewsCount: json['viewsCount'] ?? 0,
+      completionsCount: json['completionsCount'] ?? 0,
+      isExpired: expired,
+      isEffectiveActive: effective,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      if (description != null) 'description': description,
+      'videoUrl': videoUrl,
+      if (linkUrl != null) 'linkUrl': linkUrl,
+      'rewardCoins': rewardCoins,
+      'isActive': isActive,
+      if (startDate != null) 'startDate': startDate!.toIso8601String(),
+      if (endDate != null) 'endDate': endDate!.toIso8601String(),
+    };
+  }
 }
 
 class FootballPlayer {

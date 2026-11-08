@@ -27,16 +27,17 @@ class AppStateProvider extends ChangeNotifier {
         id: data['id']?.toString() ?? '',
         username: data['username'] ?? 'Player',
         avatarUrl: data['avatarUrl'] ?? 'https://api.dicebear.com/7.x/avataaars/png?seed=${data['username']}',
-        coins: wallet['balance'] ?? data['coins'] ?? 0,
-        globalRank: (stats['rankPosition'] != null && (stats['rankPosition'] as num) > 0)
+        coins: (wallet['balance'] as num?)?.toInt() ?? (data['coins'] as num?)?.toInt() ?? 0,
+        role: data['role']?.toString() ?? 'user',
+        globalRank: ((stats['rankPosition'] as num?)?.toInt() != null && (stats['rankPosition'] as num).toInt() > 0)
             ? (stats['rankPosition'] as num).toInt()
-            : ((data['globalRank'] != null && (data['globalRank'] as num) > 0)
+            : (((data['globalRank'] as num?)?.toInt() != null && (data['globalRank'] as num).toInt() > 0)
                 ? (data['globalRank'] as num).toInt()
                 : 1),
-        rankingPoints: stats['rankingPoints'] ?? data['rankingPoints'] ?? 1000,
-        totalGames: stats['gamesPlayed'] ?? data['totalGames'] ?? 0,
-        wins: stats['gamesWon'] ?? data['wins'] ?? 0,
-        totalCoinsEarned: wallet['careerCoins'] ?? data['totalCoinsEarned'] ?? 0,
+        rankingPoints: (stats['rankingPoints'] as num?)?.toInt() ?? (data['rankingPoints'] as num?)?.toInt() ?? 1000,
+        totalGames: (stats['gamesPlayed'] as num?)?.toInt() ?? (data['totalGames'] as num?)?.toInt() ?? 0,
+        wins: (stats['gamesWon'] as num?)?.toInt() ?? (data['wins'] as num?)?.toInt() ?? 0,
+        totalCoinsEarned: (wallet['careerCoins'] as num?)?.toInt() ?? (data['totalCoinsEarned'] as num?)?.toInt() ?? 0,
       );
     } catch (e) {
       _errorMessage = e.toString();
@@ -61,7 +62,27 @@ class AppStateProvider extends ChangeNotifier {
       totalGames: _currentUser!.totalGames,
       wins: _currentUser!.wins,
       totalCoinsEarned: _currentUser!.totalCoinsEarned,
+      role: _currentUser!.role,
     );
     notifyListeners();
+  }
+
+  Future<bool> updateUserAvatar(String newAvatarUrl) async {
+    if (_currentUser == null) return false;
+    final oldAvatar = _currentUser!.avatarUrl;
+    _currentUser = _currentUser!.copyWith(avatarUrl: newAvatarUrl);
+    notifyListeners();
+
+    try {
+      await _apiService.put('/me/avatar', {
+        'avatarUrl': newAvatarUrl,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('updateUserAvatar error: $e');
+      _currentUser = _currentUser!.copyWith(avatarUrl: oldAvatar);
+      notifyListeners();
+      return false;
+    }
   }
 }

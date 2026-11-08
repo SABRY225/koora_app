@@ -6,6 +6,10 @@ import '../../core/theme/app_theme.dart';
 import '../../core/providers/app_state_provider.dart';
 import '../../core/providers/wallet_provider.dart';
 import '../../core/providers/locale_provider.dart';
+import '../../core/providers/ad_provider.dart';
+import '../../core/models/models.dart';
+import '../ads/full_screen_video_ad_screen.dart';
+import '../../core/services/sound_service.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -27,11 +31,23 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AppStateProvider>().currentUser;
+    final appState = context.watch<AppStateProvider>();
+    final user = appState.currentUser ??
+        User(
+          id: '',
+          username: 'Player',
+          avatarUrl: 'assets/avatars/avatar_1.png',
+          coins: 0,
+          globalRank: 1,
+          rankingPoints: 1000,
+          totalGames: 0,
+          wins: 0,
+          totalCoinsEarned: 0,
+        );
     final walletProvider = context.watch<WalletProvider>();
     final locale = context.watch<LocaleProvider>();
 
-    if (user == null || walletProvider.isLoading) {
+    if (appState.isLoading && appState.currentUser == null) {
       return const Scaffold(
         backgroundColor: AppTheme.backgroundBlack,
         body: Center(
@@ -135,7 +151,7 @@ class _WalletScreenState extends State<WalletScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () {
-                _simulateAdAndReward(context);
+                _playRewardedAd(context);
               },
               icon: const Icon(Icons.play_circle_fill, color: AppTheme.goldAccent),
               label: Text(
@@ -256,7 +272,7 @@ class _WalletScreenState extends State<WalletScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                _simulateAdAndReward(context);
+                _playRewardedAd(context);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.goldAccent,
@@ -344,54 +360,42 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  void _simulateAdAndReward(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.read<LocaleProvider>().translate('Watching ad...'), style: GoogleFonts.inter()),
-        backgroundColor: AppTheme.surfaceCharcoal,
-        duration: const Duration(seconds: 2),
+  void _playRewardedAd(BuildContext context) async {
+    final adProvider = context.read<AdProvider>();
+    final ad = await adProvider.getRandomAd();
+
+    if (!context.mounted) return;
+
+    if (ad == null) {
+      final isArabic = context.read<LocaleProvider>().locale.languageCode == 'ar';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isArabic ? 'لا توجد إعلانات نشطة متاحة حالياً.' : 'No active ads available right now.',
+            style: GoogleFonts.inter(),
+          ),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+      return;
+    }
+
+    final user = context.read<AppStateProvider>().currentUser;
+    final isAdmin = user?.isAdmin == true;
+
+    final completed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FullScreenVideoAdScreen(ad: ad, isPreview: isAdmin),
       ),
     );
-    Future.delayed(const Duration(seconds: 2), () async {
-      if (context.mounted) {
-        await context.read<WalletProvider>().addRewardCoins(500);
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              backgroundColor: AppTheme.surfaceCharcoal,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text(
-                context.read<LocaleProvider>().translate('Reward Added!'),
-                style: GoogleFonts.inter(
-                  color: AppTheme.goldAccent,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Text(
-                context.read<LocaleProvider>().translate('+500 COINS\n\nYou are ready for your next game!'),
-                style: GoogleFonts.inter(
-                  color: AppTheme.textWhite,
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                  },
-                  child: Text(
-                    context.read<LocaleProvider>().translate('AWESOME'),
-                    style: GoogleFonts.inter(
-                      color: AppTheme.primaryGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
+
+    if (completed == true && mounted && !isAdmin) {
+      SoundService().playCoin();
+      await context.read<AppStateProvider>().fetchUserProfile();
+      if (mounted) {
+        await context.read<WalletProvider>().fetchTransactions();
       }
-    });
+    }
   }
 }

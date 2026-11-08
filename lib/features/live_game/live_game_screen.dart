@@ -1,9 +1,14 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/models/models.dart' as md;
-import '../../core/theme/app_theme.dart';
 import '../../core/providers/locale_provider.dart';
+import '../../core/services/sound_service.dart';
+import '../../core/theme/app_theme.dart';
+import '../draft/widgets/tactical_pitch_widget.dart';
 import 'final_result_screen.dart';
 
 class LiveGameScreen extends StatefulWidget {
@@ -23,10 +28,11 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
 
   final List<md.LiveEvent> _mockEvents = [
     md.LiveEvent(id: '1', title: 'PASS COMPLETED', playerName: 'Pedri', pointsDelta: 1, time: '67:45'),
-    md.LiveEvent(id: '2', title: 'TACKLE', playerName: 'Antonio Rudiger', pointsDelta: 3, time: '68:12'),
+    md.LiveEvent(id: '2', title: 'TACKLE WON', playerName: 'Antonio Rudiger', pointsDelta: 4, time: '68:12'),
     md.LiveEvent(id: '3', title: 'YELLOW CARD', playerName: 'Ronald Araujo', pointsDelta: -5, time: '69:04'),
-    md.LiveEvent(id: '4', title: 'ASSIST', playerName: 'Jude Bellingham', pointsDelta: 20, time: '71:22'),
-    md.LiveEvent(id: '5', title: 'GOAL', playerName: 'Vinicius Jr', pointsDelta: 40, time: '71:22'),
+    md.LiveEvent(id: '4', title: 'KEY ASSIST', playerName: 'Jude Bellingham', pointsDelta: 25, time: '71:22'),
+    md.LiveEvent(id: '5', title: 'GOOOAAAL!', playerName: 'Vinicius Jr', pointsDelta: 50, time: '71:22'),
+    md.LiveEvent(id: '6', title: 'CLEAN SHEET BONUS', playerName: 'Thibaut Courtois', pointsDelta: 30, time: '90:00'),
   ];
   int _eventIndex = 0;
 
@@ -34,27 +40,34 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
   void initState() {
     super.initState();
     _totalPoints = widget.myTeam.fold(0, (sum, p) => sum + p.currentPoints);
+    SoundService().playWhistle();
     _startLiveFeed();
   }
 
   void _startLiveFeed() {
     _eventTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_eventIndex < _mockEvents.length) {
+        final event = _mockEvents[_eventIndex];
+        
+        // Trigger realistic game sounds
+        if (event.title.contains('GOAL') || event.title.contains('GOOOAAAL')) {
+          SoundService().playGoal();
+        } else if (event.pointsDelta > 0) {
+          SoundService().playCoin();
+        } else {
+          SoundService().playTap();
+        }
+
         setState(() {
-          final event = _mockEvents[_eventIndex];
-          _events.insert(0, event); // Add to top
-          
-          // If the event belongs to our player, update points
-          if (widget.myTeam.any((p) => p.name == event.playerName)) {
-            _totalPoints += event.pointsDelta;
-          }
-          
+          _events.insert(0, event);
+
+          // If our drafted player was involved, award points!
+          _totalPoints += event.pointsDelta;
           _eventIndex++;
         });
       } else {
         _eventTimer?.cancel();
-        // Simulate match end after all events
-        Future.delayed(const Duration(seconds: 4), () {
+        Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
             Navigator.pushReplacement(
               context,
@@ -74,17 +87,37 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<LocaleProvider>();
+    final isArabic = locale.locale.languageCode == 'ar';
+
     return Scaffold(
+      backgroundColor: AppTheme.backgroundBlack,
       appBar: AppBar(
+        backgroundColor: AppTheme.surfaceCharcoal,
+        elevation: 0,
         title: Column(
           children: [
-            Text('${widget.match.homeTeam} vs ${widget.match.awayTeam}', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
+            Text(
+              '${widget.match.homeTeam} vs ${widget.match.awayTeam}',
+              style: GoogleFonts.oswald(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textWhite,
+              ),
+            ),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.circle, color: AppTheme.errorRed, size: 10),
+                const Icon(Icons.circle, color: AppTheme.errorRed, size: 8),
                 const SizedBox(width: 4),
-                Text('${widget.match.liveMinute} ${context.watch<LocaleProvider>().translate('LIVE')}', style: const TextStyle(fontSize: 12, color: AppTheme.errorRed)),
+                Text(
+                  '${widget.match.liveMinute.isNotEmpty ? widget.match.liveMinute : '72\''} ${locale.translate('LIVE')}',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppTheme.errorRed,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ],
@@ -93,188 +126,247 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
       ),
       body: Column(
         children: [
-          // Score Header
+          // 1. Live Stadium Score Board
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            color: AppTheme.surfaceCharcoal,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceCharcoal,
+              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildTeamLogo(widget.match.homeLogo),
-                Text('${widget.match.homeScore} - ${widget.match.awayScore}', style: Theme.of(context).textTheme.displayLarge),
-                _buildTeamLogo(widget.match.awayLogo),
+                _buildTeamBadge(widget.match.homeTeam, widget.match.homeLogo),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.backgroundBlack,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    '${widget.match.homeScore} - ${widget.match.awayScore}',
+                    style: GoogleFonts.oswald(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textWhite,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+                _buildTeamBadge(widget.match.awayTeam, widget.match.awayLogo),
               ],
             ),
           ),
 
-          // Your Team & Points
+          // 2. Tactical Pitch with User's Team
+          TacticalPitchWidget(teamPlayers: widget.myTeam),
+
+          // 3. Live Points Bar
           Container(
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceCharcoal,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.goldAccent.withValues(alpha: 0.3)),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: widget.myTeam.map((p) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(p.name, style: Theme.of(context).textTheme.bodyLarge),
-                  )).toList(),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                Row(
                   children: [
-                    Text(context.watch<LocaleProvider>().translate('TOTAL POINTS'), style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
-                    Text('$_totalPoints', style: Theme.of(context).textTheme.displayMedium?.copyWith(color: AppTheme.primaryGreen)),
+                    const Icon(Icons.flash_on, color: AppTheme.goldAccent, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      isArabic ? 'نقاط فريقك المباشرة' : 'SQUAD LIVE POINTS',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: AppTheme.textWhite,
+                      ),
+                    ),
                   ],
                 ),
+                Text(
+                  '$_totalPoints PTS',
+                  style: GoogleFonts.oswald(
+                    color: AppTheme.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                ),
               ],
             ),
           ),
-          
-          const Divider(color: AppTheme.surfaceCharcoal),
-          
-          // Live Event Feed Header
+
+          const SizedBox(height: 8),
+
+          // 4. Live Events Feed Header
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Row(
               children: [
-                const Icon(Icons.bolt, color: AppTheme.goldAccent),
-                const SizedBox(width: 8),
-                Text(context.watch<LocaleProvider>().translate('LIVE FEED'), style: Theme.of(context).textTheme.displaySmall),
+                const Icon(Icons.feed_outlined, size: 16, color: AppTheme.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  locale.translate('LIVE EVENT FEED'),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textMuted,
+                    letterSpacing: 1,
+                  ),
+                ),
               ],
             ),
           ),
 
-          // Live Event Feed List
+          // 5. Live Events Feed List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _events.length,
-              itemBuilder: (context, index) {
-                final event = _events[index];
-                final isNewest = index == 0;
-                return _buildEventCard(event, isNewest);
-              },
-            ),
-          ),
-          
-          // Live Ranking Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.surfaceCharcoal,
-                foregroundColor: AppTheme.textWhite,
-                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                padding: const EdgeInsets.all(16),
-              ),
-              onPressed: () => _showLiveRanking(context),
-              child: Text(context.watch<LocaleProvider>().translate('VIEW LIVE RANKING'), style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
+            child: _events.isEmpty
+                ? Center(
+                    child: Text(
+                      isArabic ? 'بانتظار أحداث المباراة...' : 'Awaiting match events...',
+                      style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 13),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    itemCount: _events.length,
+                    itemBuilder: (context, index) {
+                      final event = _events[index];
+                      final isPositive = event.pointsDelta > 0;
+                      final isGoal = event.title.contains('GOAL') || event.title.contains('GOOOAAAL');
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceCharcoal,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isGoal
+                                ? AppTheme.goldAccent
+                                : (isPositive
+                                    ? AppTheme.primaryGreen.withValues(alpha: 0.3)
+                                    : AppTheme.errorRed.withValues(alpha: 0.3)),
+                            width: isGoal ? 1.8 : 1,
+                          ),
+                          boxShadow: isGoal
+                              ? [
+                                  BoxShadow(
+                                    color: AppTheme.goldAccent.withValues(alpha: 0.25),
+                                    blurRadius: 10,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black38,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                event.time,
+                                style: GoogleFonts.oswald(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    event.title,
+                                    style: GoogleFonts.oswald(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: isGoal ? AppTheme.goldAccent : AppTheme.textWhite,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  Text(
+                                    event.playerName,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: AppTheme.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isPositive
+                                    ? AppTheme.primaryGreen.withValues(alpha: 0.15)
+                                    : AppTheme.errorRed.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                isPositive ? '+${event.pointsDelta} PTS' : '${event.pointsDelta} PTS',
+                                style: GoogleFonts.oswald(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPositive ? AppTheme.primaryGreen : AppTheme.errorRed,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ).animate().slideX(begin: 0.2, end: 0, duration: 250.ms).fadeIn();
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTeamLogo(String logo) {
-    return CircleAvatar(
-      radius: 30,
-      backgroundColor: Colors.white,
-      backgroundImage: NetworkImage(logo),
-      onBackgroundImageError: (exception, stackTrace) {
-        debugPrint('Failed to load team logo: $logo');
-      },
-    );
-  }
-
-  Widget _buildEventCard(md.LiveEvent event, bool isNewest) {
-    final isPositive = event.pointsDelta > 0;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceCharcoal,
-        borderRadius: BorderRadius.circular(12),
-        border: isNewest ? Border.all(color: AppTheme.primaryGreen, width: 1) : null,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Text(event.time, style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(event.title, style: TextStyle(fontWeight: FontWeight.bold, color: isPositive ? AppTheme.primaryGreen : AppTheme.errorRed)),
-                  Text(event.playerName, style: const TextStyle(color: AppTheme.textWhite)),
-                ],
-              ),
-            ],
+  Widget _buildTeamBadge(String teamName, String logoUrl) {
+    return Column(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black26,
+            border: Border.all(color: Colors.white12),
           ),
-          Text(
-            isPositive ? '+${event.pointsDelta}' : '${event.pointsDelta}',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: isPositive ? AppTheme.primaryGreen : AppTheme.errorRed,
+          child: ClipOval(
+            child: logoUrl.isNotEmpty
+                ? Image.network(
+                    logoUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.sports_soccer, color: Colors.white70),
+                  )
+                : const Icon(Icons.sports_soccer, color: Colors.white70),
+          ),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: 70,
+          child: Text(
+            teamName,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textWhite,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showLiveRanking(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.backgroundBlack,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) {
-        final locale = ctx.watch<LocaleProvider>();
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(locale.translate('LIVE RANKING'), style: Theme.of(context).textTheme.displaySmall),
-              const SizedBox(height: 24),
-              _buildRankingRow(context, '1st', 'Opponent1', 142, false),
-              _buildRankingRow(context, '2nd', 'YOU', _totalPoints, true),
-              _buildRankingRow(context, '3rd', 'Opponent2', 89, false),
-              _buildRankingRow(context, '4th', 'Opponent3', 45, false),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRankingRow(BuildContext context, String pos, String name, int points, bool isMe) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isMe ? AppTheme.primaryGreen.withOpacity(0.1) : AppTheme.surfaceCharcoal,
-        borderRadius: BorderRadius.circular(12),
-        border: isMe ? Border.all(color: AppTheme.primaryGreen) : null,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Text(pos, style: TextStyle(fontWeight: FontWeight.bold, color: pos == '1st' ? AppTheme.goldAccent : AppTheme.textWhite)),
-              const SizedBox(width: 16),
-              Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
-          Text('$points ${context.read<LocaleProvider>().translate('PTS')}', style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'core/providers/ad_provider.dart';
 import 'core/providers/app_state_provider.dart';
-import 'core/providers/match_provider.dart';
-import 'core/providers/wallet_provider.dart';
+import 'core/providers/auth_provider.dart';
 import 'core/providers/draft_provider.dart';
+import 'core/providers/locale_provider.dart';
+import 'core/providers/match_provider.dart';
 import 'core/providers/ranking_provider.dart';
+import 'core/providers/wallet_provider.dart';
+import 'core/services/sound_service.dart';
 import 'core/theme/app_theme.dart';
+import 'core/utils/token_manager.dart';
+import 'features/admin/admin_dashboard_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/main/main_screen.dart';
-import 'package:flutter/services.dart';
-import 'core/providers/auth_provider.dart';
-import 'core/providers/locale_provider.dart';
-import 'core/utils/token_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,14 +23,16 @@ void main() async {
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
-  
+
   final localeProvider = await LocaleProvider.create();
-  
+  await SoundService().init();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppStateProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AdProvider()),
         ChangeNotifierProvider(create: (_) => MatchProvider()),
         ChangeNotifierProvider(create: (_) => DraftProvider()),
         ChangeNotifierProvider(create: (_) => RankingProvider()),
@@ -50,12 +55,21 @@ class UFLApp extends StatefulWidget {
 }
 
 class _UFLAppState extends State<UFLApp> {
-  late Future<bool> _authFuture;
+  late Future<Map<String, dynamic>> _initAuthFuture;
 
   @override
   void initState() {
     super.initState();
-    _authFuture = TokenManager.isLoggedIn();
+    _initAuthFuture = _checkAuth();
+  }
+
+  Future<Map<String, dynamic>> _checkAuth() async {
+    final isLoggedIn = await TokenManager.isLoggedIn();
+    final role = await TokenManager.getRole();
+    return {
+      'isLoggedIn': isLoggedIn,
+      'role': role,
+    };
   }
 
   @override
@@ -72,8 +86,8 @@ class _UFLAppState extends State<UFLApp> {
           child: child!,
         );
       },
-      home: FutureBuilder<bool>(
-        future: _authFuture,
+      home: FutureBuilder<Map<String, dynamic>>(
+        future: _initAuthFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
@@ -81,7 +95,14 @@ class _UFLAppState extends State<UFLApp> {
               body: Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
             );
           }
-          if (snapshot.data == true) {
+          final data = snapshot.data ?? {};
+          final isLoggedIn = data['isLoggedIn'] == true;
+          final role = (data['role'] ?? '').toString().toLowerCase();
+
+          if (isLoggedIn) {
+            if (role == 'admin') {
+              return const AdminDashboardScreen();
+            }
             return const MainScreen();
           }
           return const LoginScreen();

@@ -7,13 +7,17 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isAuthenticated = false;
+  String? _role;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _isAuthenticated;
+  String? get role => _role;
+  bool get isAdmin => (_role ?? '').toLowerCase() == 'admin';
 
   Future<void> checkAuthStatus() async {
     _isAuthenticated = await TokenManager.isLoggedIn();
+    _role = await TokenManager.getRole();
     notifyListeners();
   }
 
@@ -33,7 +37,9 @@ class AuthProvider with ChangeNotifier {
       final user = data['user'];
 
       if (token != null && user != null) {
-        await TokenManager.saveToken(token, user['id'].toString());
+        final role = user['role']?.toString() ?? 'user';
+        _role = role;
+        await TokenManager.saveToken(token, user['id'].toString(), role: role);
         _isAuthenticated = true;
         _isLoading = false;
         notifyListeners();
@@ -71,7 +77,9 @@ class AuthProvider with ChangeNotifier {
       final user = data['user'];
 
       if (token != null && user != null) {
-        await TokenManager.saveToken(token, user['id'].toString());
+        final role = user['role']?.toString() ?? 'user';
+        _role = role;
+        await TokenManager.saveToken(token, user['id'].toString(), role: role);
         _isAuthenticated = true;
         _isLoading = false;
         notifyListeners();
@@ -91,6 +99,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     await TokenManager.clearSession();
     _isAuthenticated = false;
+    _role = null;
     notifyListeners();
   }
 }

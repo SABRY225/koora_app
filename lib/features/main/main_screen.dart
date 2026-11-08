@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/locale_provider.dart';
+import '../../core/services/sound_service.dart';
 
 import '../home/home_screen.dart';
 // Placeholders for other screens
@@ -48,6 +49,7 @@ class _MainScreenState extends State<MainScreen> {
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 10),
           onTap: (index) {
+            SoundService().playTap();
             setState(() {
               _currentIndex = index;
             });
