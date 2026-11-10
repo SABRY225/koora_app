@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -26,15 +27,39 @@ class DraftScreen extends StatefulWidget {
 class _DraftScreenState extends State<DraftScreen> {
   md.PlayerPosition _selectedTab = md.PlayerPosition.attack;
   bool _showPitch = true;
+  Timer? _waitingPollingTimer;
+  bool _hasNavigatedToLive = false;
 
   @override
   void initState() {
     super.initState();
     SoundService().playWhistle();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userId = context.read<AppStateProvider>().currentUser?.id ?? '';
-      context.read<DraftProvider>().connectAndJoin(widget.gameId, userId);
+      final draft = context.read<DraftProvider>();
+      draft.connectAndJoin(widget.gameId, userId);
+
+      // Setup periodic poll if room is in WAITING state
+      _waitingPollingTimer = Timer.periodic(const Duration(milliseconds: 1200), (t) {
+        if (!mounted) {
+          t.cancel();
+          return;
+        }
+        final status = draft.status;
+        if (status == 'WAITING' || status == 'PENDING' || status == null) {
+          draft.fetchDraftState();
+        } else if (status == 'DRAFTING' || status == 'LIVE') {
+          t.cancel();
+        }
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _waitingPollingTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -43,6 +68,7 @@ class _DraftScreenState extends State<DraftScreen> {
     final locale = context.watch<LocaleProvider>();
     final isArabic = locale.locale.languageCode == 'ar';
 
+    // 1. Initial Loading Spinner
     if (draft.isLoading && draft.status == null) {
       return const Scaffold(
         backgroundColor: AppTheme.backgroundBlack,
@@ -50,73 +76,102 @@ class _DraftScreenState extends State<DraftScreen> {
       );
     }
 
-    if (draft.status == 'PENDING' || draft.status == null) {
+    // 2. Waiting Room State (Before draft officially starts)
+    if (draft.status == 'WAITING' || draft.status == 'PENDING' || draft.status == null) {
       return Scaffold(
         backgroundColor: AppTheme.backgroundBlack,
+        appBar: AppBar(
+          backgroundColor: AppTheme.surfaceCharcoal,
+          title: Text(
+            isArabic ? 'غرفة الانتظار' : 'WAITING ROOM',
+            style: GoogleFonts.oswald(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          ),
+          centerTitle: true,
+        ),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.surfaceCharcoal,
-                  border: Border.all(color: AppTheme.primaryGreen, width: 2),
-                ),
-                child: const Icon(Icons.sports_soccer, size: 56, color: AppTheme.primaryGreen),
-              ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(
-                    begin: const Offset(0.95, 0.95),
-                    end: const Offset(1.05, 1.05),
-                    duration: 1000.ms,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.surfaceCharcoal,
+                    border: Border.all(color: AppTheme.primaryGreen, width: 2.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        spreadRadius: 4,
+                      ),
+                    ],
                   ),
-              const SizedBox(height: 24),
-              Text(
-                locale.translate('GAME ROOM'),
-                style: GoogleFonts.oswald(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textWhite,
-                  letterSpacing: 1.5,
+                  child: const Icon(Icons.sports_soccer, size: 56, color: AppTheme.primaryGreen),
+                ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(
+                      begin: const Offset(0.95, 0.95),
+                      end: const Offset(1.06, 1.06),
+                      duration: 900.ms,
+                    ),
+                const SizedBox(height: 28),
+                Text(
+                  isArabic ? 'جاري تجهيز الدرافت واللاعبين...' : 'PREPARING DRAFT ROOM...',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.oswald(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textWhite,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                locale.translate('Waiting for players...'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: AppTheme.textMuted,
+                const SizedBox(height: 12),
+                Text(
+                  isArabic
+                      ? 'يتم ملء الغرفة وتوزيع نجوم المباراة بنظام Snake Draft'
+                      : 'Filling room with 4 managers & initializing Snake Draft',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppTheme.textMuted,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 32),
-              const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.primaryGreen),
-              ),
-            ],
+                const SizedBox(height: 36),
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 3, color: AppTheme.primaryGreen),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
+    // 3. Live Match Transition
     if (draft.status == 'LIVE') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        SoundService().playWhistle();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => LiveGameScreen(match: widget.match, myTeam: draft.myTeam),
-          ),
-        );
-      });
+      if (!_hasNavigatedToLive) {
+        _hasNavigatedToLive = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          SoundService().playWhistle();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => LiveGameScreen(match: widget.match, myTeam: draft.myTeam),
+            ),
+          );
+        });
+      }
       return const Scaffold(
         backgroundColor: AppTheme.backgroundBlack,
-        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+        body: Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+        ),
       );
     }
 
-    bool isMyTurn = true; // In live match: activeTurn['participantId'] == myParticipantId
+    final isMyTurn = draft.isMyTurn;
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
@@ -125,28 +180,36 @@ class _DraftScreenState extends State<DraftScreen> {
         elevation: 0,
         title: Column(
           children: [
-            Text(
-              locale.translate('SNAKE DRAFT'),
-              style: GoogleFonts.oswald(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-                color: AppTheme.primaryGreen,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.bolt, color: AppTheme.goldAccent, size: 18),
+                const SizedBox(width: 4),
+                Text(
+                  isArabic ? 'سنيك درافت' : 'SNAKE DRAFT',
+                  style: GoogleFonts.oswald(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+              ],
             ),
             Text(
-              '${widget.match.homeTeam} vs ${widget.match.awayTeam}',
-              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+              '${widget.match.homeTeam} VS ${widget.match.awayTeam}',
+              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
             ),
           ],
         ),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: Icon(
-              _showPitch ? Icons.sports_soccer : Icons.grid_view_rounded,
+              _showPitch ? Icons.view_agenda_outlined : Icons.stadium_outlined,
               color: AppTheme.primaryGreen,
             ),
-            tooltip: isArabic ? 'إظهار/إخفاء الملعب' : 'Toggle Pitch',
+            tooltip: isArabic ? 'الملعب التكتيكي' : 'Tactical Pitch',
             onPressed: () {
               SoundService().playTap();
               setState(() {
@@ -155,58 +218,16 @@ class _DraftScreenState extends State<DraftScreen> {
             },
           ),
         ],
-        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
-          // 1. Turn Status & Countdown Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            color: AppTheme.surfaceCharcoal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildUserStatus(context, isArabic ? 'فريقك' : 'YOUR SQUAD', true),
-                Column(
-                  children: [
-                    Text(
-                      '${locale.translate('TURN')} ${draft.currentTurn}',
-                      style: GoogleFonts.oswald(
-                        color: AppTheme.goldAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: draft.timerSeconds <= 10
-                            ? AppTheme.errorRed.withValues(alpha: 0.2)
-                            : Colors.black26,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: draft.timerSeconds <= 10 ? AppTheme.errorRed : Colors.white24,
-                        ),
-                      ),
-                      child: Text(
-                        '${draft.timerSeconds}s',
-                        style: GoogleFonts.oswald(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: draft.timerSeconds <= 10 ? AppTheme.errorRed : AppTheme.textWhite,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                _buildUserStatus(context, isArabic ? 'الخصم' : 'OPPONENT', false),
-              ],
-            ),
-          ),
+          // 1. 4-Player Managers Carousel
+          _buildParticipantsBar(context, draft, isArabic),
 
-          // 2. Interactive Tactical Pitch Widget
+          // 2. Active Turn & Countdown Banner
+          _buildTurnBanner(context, draft, isArabic, isMyTurn),
+
+          // 3. Interactive Tactical Pitch Widget
           if (_showPitch)
             TacticalPitchWidget(
               teamPlayers: draft.myTeam,
@@ -216,75 +237,186 @@ class _DraftScreenState extends State<DraftScreen> {
                   _selectedTab = pos;
                 });
               },
-            ).animate().fadeIn(duration: 300.ms),
+            ).animate().fadeIn(duration: 250.ms),
 
-          // 3. Position Choice Tabs
-          Container(
-            height: 44,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: md.PlayerPosition.values.map((pos) {
-                final isSelected = _selectedTab == pos;
-                String posLabel;
-                switch (pos) {
-                  case md.PlayerPosition.attack:
-                    posLabel = isArabic ? 'الهجوم (FW)' : 'ATTACK (FW)';
-                    break;
-                  case md.PlayerPosition.midfield:
-                    posLabel = isArabic ? 'الوسط (MF)' : 'MIDFIELD (MF)';
-                    break;
-                  case md.PlayerPosition.defense:
-                    posLabel = isArabic ? 'الدفاع (DF)' : 'DEFENSE (DF)';
-                    break;
-                  case md.PlayerPosition.goalkeeper:
-                    posLabel = isArabic ? 'الحراسة (GK)' : 'GOALKEEPER (GK)';
-                    break;
-                }
+          // 4. Position Choice Tabs with Player Counts
+          _buildPositionTabs(context, draft, isArabic),
 
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ChoiceChip(
-                    label: Text(posLabel),
-                    selected: isSelected,
-                    onSelected: (val) {
-                      SoundService().playTap();
-                      setState(() {
-                        _selectedTab = pos;
-                      });
-                    },
-                    selectedColor: AppTheme.primaryGreen,
-                    backgroundColor: AppTheme.surfaceCharcoal,
-                    labelStyle: GoogleFonts.inter(
-                      color: isSelected ? AppTheme.backgroundBlack : AppTheme.textWhite,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+          // 5. FUT Player Cards List
+          Expanded(
+            child: _buildPlayerCardsList(context, draft, isArabic, isMyTurn),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParticipantsBar(BuildContext context, DraftProvider draft, bool isArabic) {
+    final participants = draft.participants;
+    if (participants.isEmpty) return const SizedBox.shrink();
+
+    final activeParticipantId = draft.activeTurn?['participantId'];
+
+    return Container(
+      color: AppTheme.surfaceCharcoal,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: participants.map((p) {
+          final isTurn = p['id'] == activeParticipantId;
+          final isMe = p['id'] == draft.myParticipantId;
+          final selectionsCount = draft.selections.where((s) => s['participantId'] == p['id']).length;
+          final rawUsername = p['username']?.toString() ?? 'Player';
+          final username = isMe ? (isArabic ? '$rawUsername (أنت)' : '$rawUsername (You)') : rawUsername;
+          final avatarUrl = p['avatarUrl']?.toString() ?? '';
+
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              decoration: BoxDecoration(
+                color: isTurn ? AppTheme.primaryGreen.withValues(alpha: 0.15) : AppTheme.surfaceObsidian,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isTurn ? AppTheme.primaryGreen : Colors.white12,
+                  width: isTurn ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: isTurn ? AppTheme.primaryGreen : Colors.white24,
+                        backgroundImage: avatarUrl.startsWith('http')
+                            ? NetworkImage(avatarUrl)
+                            : (avatarUrl.isNotEmpty ? AssetImage(avatarUrl) : null) as ImageProvider?,
+                        child: avatarUrl.isEmpty
+                            ? Text(
+                                username.isNotEmpty ? username[0].toUpperCase() : 'P',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                              )
+                            : null,
+                      ),
+                      if (selectionsCount > 0)
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.goldAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$selectionsCount',
+                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    username,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: isTurn ? FontWeight.bold : FontWeight.w500,
+                      color: isTurn ? AppTheme.primaryGreen : AppTheme.textWhite,
                     ),
                   ),
-                );
-              }).toList(),
+                  Text(
+                    isTurn ? (isArabic ? 'يختار الآن' : 'PICKING') : (isArabic ? 'انتظار' : 'WAITING'),
+                    style: GoogleFonts.inter(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      color: isTurn ? AppTheme.goldAccent : Colors.white38,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          );
+        }).toList(),
+      ),
+    );
+  }
 
-          // 4. FUT Player Cards List
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 24.0),
-              children: draft.availablePlayers
-                  .where((p) => p.position == _selectedTab)
-                  .map((player) {
-                final alreadyPicked = draft.myTeam.any((p) => p.id == player.id);
-                return PlayerCardWidget(
-                  player: player,
-                  isSelected: alreadyPicked,
-                  onSelect: isMyTurn && !alreadyPicked
-                      ? () {
-                          draft.selectPlayer(player.id);
-                        }
-                      : null,
-                );
-              }).toList(),
+  Widget _buildTurnBanner(BuildContext context, DraftProvider draft, bool isArabic, bool isMyTurn) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isMyTurn
+            ? AppTheme.primaryGreen.withValues(alpha: 0.2)
+            : AppTheme.surfaceCharcoal,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isMyTurn ? AppTheme.primaryGreen : Colors.white12,
+          width: isMyTurn ? 2 : 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isMyTurn ? Icons.touch_app : Icons.hourglass_top_rounded,
+                color: isMyTurn ? AppTheme.primaryGreen : AppTheme.goldAccent,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isMyTurn
+                        ? (isArabic ? '🔥 دورك الآن! اختر لاعباً' : '🔥 YOUR TURN! PICK A PLAYER')
+                        : (isArabic ? '⏳ دور: ${draft.activePlayerName}' : '⏳ Turn: ${draft.activePlayerName}'),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: isMyTurn ? AppTheme.primaryGreen : AppTheme.textWhite,
+                    ),
+                  ),
+                  Text(
+                    '${isArabic ? 'الجولة' : 'ROUND'} ${draft.currentTurn <= 4 ? 1 : 2} • ${isArabic ? 'الدور' : 'TURN'} ${draft.currentTurn}/8',
+                    style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textMuted),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: draft.timerSeconds <= 5
+                  ? AppTheme.errorRed.withValues(alpha: 0.3)
+                  : Colors.white10,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: draft.timerSeconds <= 5 ? AppTheme.errorRed : Colors.white24,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.timer_outlined,
+                  size: 14,
+                  color: draft.timerSeconds <= 5 ? AppTheme.errorRed : AppTheme.textWhite,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${draft.timerSeconds}s',
+                  style: GoogleFonts.oswald(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: draft.timerSeconds <= 5 ? AppTheme.errorRed : AppTheme.textWhite,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -292,38 +424,121 @@ class _DraftScreenState extends State<DraftScreen> {
     );
   }
 
-  Widget _buildUserStatus(BuildContext context, String name, bool isActive) {
+  Widget _buildPositionTabs(BuildContext context, DraftProvider draft, bool isArabic) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive ? AppTheme.primaryGreen.withValues(alpha: 0.15) : Colors.transparent,
-        border: Border.all(
-          color: isActive ? AppTheme.primaryGreen : Colors.white24,
-          width: 1.5,
+      height: 42,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: md.PlayerPosition.values.map((pos) {
+          final isSelected = _selectedTab == pos;
+          final count = draft.availablePlayers.where((p) => p.position == pos).length;
+
+          String posLabel;
+          switch (pos) {
+            case md.PlayerPosition.attack:
+              posLabel = isArabic ? 'الهجوم (FW)' : 'ATTACK (FW)';
+              break;
+            case md.PlayerPosition.midfield:
+              posLabel = isArabic ? 'الوسط (MF)' : 'MIDFIELD (MF)';
+              break;
+            case md.PlayerPosition.defense:
+              posLabel = isArabic ? 'الدفاع (DF)' : 'DEFENSE (DF)';
+              break;
+            case md.PlayerPosition.goalkeeper:
+              posLabel = isArabic ? 'الحراسة (GK)' : 'GOALKEEPER (GK)';
+              break;
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ChoiceChip(
+              label: Text('$posLabel ($count)'),
+              selected: isSelected,
+              onSelected: (val) {
+                SoundService().playTap();
+                setState(() {
+                  _selectedTab = pos;
+                });
+              },
+              selectedColor: AppTheme.primaryGreen,
+              backgroundColor: AppTheme.surfaceCharcoal,
+              labelStyle: GoogleFonts.inter(
+                color: isSelected ? AppTheme.backgroundBlack : AppTheme.textWhite,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPlayerCardsList(BuildContext context, DraftProvider draft, bool isArabic, bool isMyTurn) {
+    final filteredPlayers = draft.availablePlayers.where((p) => p.position == _selectedTab).toList();
+
+    if (filteredPlayers.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.people_outline, size: 48, color: Colors.white24),
+            const SizedBox(height: 12),
+            Text(
+              isArabic ? 'لا يوجد لاعبين متاحين في هذا المركز' : 'No available players in this position',
+              style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 14),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            name,
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: isActive ? AppTheme.primaryGreen : AppTheme.textMuted,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            isActive ? 'ACTIVE' : 'WAITING',
-            style: GoogleFonts.inter(
-              fontSize: 9,
-              color: isActive ? AppTheme.goldAccent : Colors.white38,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 24.0),
+      itemCount: filteredPlayers.length,
+      itemBuilder: (ctx, index) {
+        final player = filteredPlayers[index];
+        final alreadyPicked = draft.myTeam.any((p) => p.id == player.id);
+
+        return PlayerCardWidget(
+          player: player,
+          isSelected: alreadyPicked,
+          onSelect: isMyTurn && !alreadyPicked
+              ? () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final ok = await draft.selectPlayer(player.id);
+                  if (ok && mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isArabic ? 'تم اختيار ${player.name} بنجاح!' : 'Selected ${player.name} successfully!',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
+                        backgroundColor: AppTheme.primaryGreen,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
+              : () {
+                  if (!isMyTurn) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isArabic
+                              ? 'انتظر دورك في الاختيار (دور: ${draft.activePlayerName})'
+                              : 'Wait for your turn (Current: ${draft.activePlayerName})',
+                        ),
+                        backgroundColor: AppTheme.surfaceCharcoal,
+                        duration: const Duration(milliseconds: 1200),
+                      ),
+                    );
+                  }
+                },
+        );
+      },
     );
   }
 }

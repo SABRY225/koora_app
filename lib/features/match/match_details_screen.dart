@@ -147,25 +147,29 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     try {
       final apiService = ApiService();
       
-      // Check if we already joined a game for this fixture
+      // Check if we already joined an active game or if an open room exists
       final gamesRes = await apiService.get('/games');
-      final games = gamesRes['data'] as List;
-      
-      String? existingGameId;
+      final games = gamesRes['data'] as List? ?? [];
+
+      String? existingJoinedGameId;
+      String? openWaitingGameId;
+
       for (var g in games) {
-        if (g['fixtureId'] == widget.match.id && g['hasJoined'] == true && g['status'] != 'CANCELLED' && g['status'] != 'FINISHED') {
-          existingGameId = g['id'];
-          break;
+        if (g['fixtureId'] == widget.match.id) {
+          if (g['hasJoined'] == true && g['status'] != 'CANCELLED' && g['status'] != 'FINISHED') {
+            existingJoinedGameId = g['id'];
+            break;
+          } else if (g['status'] == 'WAITING' && (g['currentParticipantCount'] ?? 0) < 4) {
+            openWaitingGameId ??= g['id'];
+          }
         }
       }
-      
+
       String gameId;
-      if (existingGameId != null) {
-        gameId = existingGameId;
-        // Don't deduct coins locally, we already paid
+      if (existingJoinedGameId != null) {
+        gameId = existingJoinedGameId;
       } else {
         if (!context.mounted) return;
-        // Confirmation modal before deducting coins and starting
         final bool? confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) {
@@ -215,23 +219,24 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
 
         SoundService().playWhistle();
 
-        // 1. Create a Game Room for this fixture
-        final createRes = await apiService.post('/games', {
-          'fixtureId': widget.match.id,
-          'entryFee': '500',
-        });
-        
-        gameId = createRes['data']['id'];
+        // If an open room exists, join it. Otherwise create a new room.
+        if (openWaitingGameId != null) {
+          gameId = openWaitingGameId;
+        } else {
+          final createRes = await apiService.post('/games', {
+            'fixtureId': widget.match.id,
+            'entryFee': '500',
+          });
+          gameId = createRes['data']['id'];
+        }
 
-        // 2. Join the Game Room
+        // Join the Game Room
         final joinRes = await apiService.post('/games/$gameId/join', {});
 
-        // Use the backend's authoritative remainingBalance for UI update
         final remainingBalance = joinRes['data']?['remainingBalance'];
         if (remainingBalance != null) {
           appState.updateCoinsOptimistically(remainingBalance);
         } else {
-          // Fallback: re-fetch profile to get accurate balance
           await appState.fetchUserProfile();
         }
       }
