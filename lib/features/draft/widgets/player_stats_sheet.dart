@@ -88,13 +88,27 @@ class PlayerStatsSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppTheme.goldAccent),
                 ),
-                child: Text(
-                  '${player.points.toInt()} PTS',
-                  style: GoogleFonts.oswald(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.goldAccent,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${player.rating} OVR',
+                      style: GoogleFonts.oswald(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.goldAccent,
+                        height: 1,
+                      ),
+                    ),
+                    Text(
+                      '${player.points.toInt()} PTS',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

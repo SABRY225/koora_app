@@ -220,9 +220,19 @@ class DraftProvider with ChangeNotifier {
         id: p['id'].toString(),
         name: p['name'] ?? 'Player',
         position: parsePosition(p['position']),
-        teamName: 'Team',
-        teamLogo: p['photoUrl'] ?? 'T',
+        teamName: p['teamName'] ?? 'Team',
+        teamLogo: p['teamLogo'] ?? p['photoUrl'] ?? '',
         points: (p['avgPoints'] is num) ? (p['avgPoints'] as num).toDouble() : 0.0,
+        rating: (p['rating'] is num) ? (p['rating'] as num).toInt() : 80,
+        goals: (p['goals'] is num) ? (p['goals'] as num).toInt() : 0,
+        assists: (p['assists'] is num) ? (p['assists'] as num).toInt() : 0,
+        passes: (p['passes'] is num) ? (p['passes'] as num).toInt() : 0,
+        tackles: (p['tackles'] is num) ? (p['tackles'] as num).toInt() : 0,
+        cleanSheet: (p['cleanSheet'] is num) ? (p['cleanSheet'] as num).toInt() : 0,
+        saves: (p['saves'] is num) ? (p['saves'] as num).toInt() : 0,
+        bigChances: (p['bigChances'] is num) ? (p['bigChances'] as num).toInt() : 0,
+        yellowCards: (p['yellowCards'] is num) ? (p['yellowCards'] as num).toInt() : 0,
+        redCards: (p['redCards'] is num) ? (p['redCards'] as num).toInt() : 0,
       )).toList();
 
       notifyListeners();

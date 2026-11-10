@@ -7,6 +7,7 @@ import '../../core/providers/locale_provider.dart';
 import '../../core/providers/app_state_provider.dart';
 import '../../core/providers/wallet_provider.dart';
 import '../draft/draft_screen.dart';
+import 'game_lobby_screen.dart';
 import '../../core/services/sound_service.dart';
 
 class MatchDetailsScreen extends StatefulWidget {
@@ -241,12 +242,25 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
         }
       }
 
-      // Navigate to draft screen
+      // Navigate to draft screen if room has 4 players (status DRAFTING), else lobby
       if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => DraftScreen(match: widget.match, gameId: gameId)),
-        );
+        final gameDetailsRes = await apiService.get('/games/$gameId');
+        final currentStatus = gameDetailsRes['data']?['status'];
+        final participantsCount = (gameDetailsRes['data']?['participants'] as List?)?.length ?? 0;
+
+        if (context.mounted) {
+          if (currentStatus == 'DRAFTING' || participantsCount >= 4) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => DraftScreen(match: widget.match, gameId: gameId)),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => GameLobbyScreen(match: widget.match, gameId: gameId)),
+            );
+          }
+        }
       }
     } catch (e) {
       if (context.mounted) {

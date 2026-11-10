@@ -137,6 +137,7 @@ class FootballPlayer {
   final PlayerPosition position;
   final int currentPoints;
   final double points;
+  final int rating;
   
   // Detailed stats
   final int goals;
@@ -158,6 +159,7 @@ class FootballPlayer {
     required this.position,
     this.currentPoints = 0,
     this.points = 0.0,
+    this.rating = 80,
     this.goals = 0,
     this.assists = 0,
     this.bigChances = 0,

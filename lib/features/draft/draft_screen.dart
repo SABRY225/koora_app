@@ -11,6 +11,7 @@ import '../../core/providers/locale_provider.dart';
 import '../../core/services/sound_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../live_game/live_game_screen.dart';
+import '../match/game_lobby_screen.dart';
 import 'widgets/player_card_widget.dart';
 import 'widgets/tactical_pitch_widget.dart';
 
@@ -76,75 +77,20 @@ class _DraftScreenState extends State<DraftScreen> {
       );
     }
 
-    // 2. Waiting Room State (Before draft officially starts)
-    if (draft.status == 'WAITING' || draft.status == 'PENDING' || draft.status == null) {
-      return Scaffold(
+    // 2. Waiting Room State (Route to Challengers Lobby if waiting for players)
+    if (draft.status == 'WAITING' && draft.participants.length < 4) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GameLobbyScreen(match: widget.match, gameId: widget.gameId),
+          ),
+        );
+      });
+      return const Scaffold(
         backgroundColor: AppTheme.backgroundBlack,
-        appBar: AppBar(
-          backgroundColor: AppTheme.surfaceCharcoal,
-          title: Text(
-            isArabic ? 'غرفة الانتظار' : 'WAITING ROOM',
-            style: GoogleFonts.oswald(fontWeight: FontWeight.bold, letterSpacing: 1.2),
-          ),
-          centerTitle: true,
-        ),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.surfaceCharcoal,
-                    border: Border.all(color: AppTheme.primaryGreen, width: 2.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryGreen.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        spreadRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.sports_soccer, size: 56, color: AppTheme.primaryGreen),
-                ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(
-                      begin: const Offset(0.95, 0.95),
-                      end: const Offset(1.06, 1.06),
-                      duration: 900.ms,
-                    ),
-                const SizedBox(height: 28),
-                Text(
-                  isArabic ? 'جاري تجهيز الدرافت واللاعبين...' : 'PREPARING DRAFT ROOM...',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.oswald(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textWhite,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  isArabic
-                      ? 'يتم ملء الغرفة وتوزيع نجوم المباراة بنظام Snake Draft'
-                      : 'Filling room with 4 managers & initializing Snake Draft',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: AppTheme.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 36),
-                const SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(strokeWidth: 3, color: AppTheme.primaryGreen),
-                ),
-              ],
-            ),
-          ),
+          child: CircularProgressIndicator(color: AppTheme.primaryGreen),
         ),
       );
     }

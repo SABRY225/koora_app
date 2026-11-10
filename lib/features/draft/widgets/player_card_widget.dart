@@ -46,6 +46,7 @@ class PlayerCardWidget extends StatelessWidget {
   }
 
   int _getCalculatedRating() {
+    if (player.rating > 0) return player.rating;
     int base = 78;
     if (player.goals > 0) base += player.goals * 4;
     if (player.assists > 0) base += player.assists * 3;
