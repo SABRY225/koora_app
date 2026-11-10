@@ -158,7 +158,11 @@ class _DraftScreenState extends State<DraftScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => LiveGameScreen(match: widget.match, myTeam: draft.myTeam),
+              builder: (_) => LiveGameScreen(
+                match: widget.match,
+                myTeam: draft.myTeam,
+                gameId: draft.gameId ?? widget.gameId,
+              ),
             ),
           );
         });

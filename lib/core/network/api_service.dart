@@ -8,8 +8,8 @@ class ApiService {
   ApiService._internal();
 
   // Use 10.0.2.2 for Android Emulator, localhost for iOS Simulator/Windows/Web
-  static const String baseUrl = 'http://192.168.1.14:3000/api/v1';
-  static const String socketUrl = 'http://192.168.1.14:3000';
+  static const String baseUrl = 'http://192.168.1.17:3000/api/v1';
+  static const String socketUrl = 'http://192.168.1.17:3000';
 
   static String resolveUrl(String url) {
     if (url.startsWith('http://') || url.startsWith('https://')) {

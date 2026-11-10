@@ -28,6 +28,7 @@ class DraftProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get status => _status;
+  String? get gameId => _gameId;
   int get currentTurn => _currentTurn;
   int get timerSeconds => _timerSeconds;
   String? get myParticipantId => _myParticipantId;

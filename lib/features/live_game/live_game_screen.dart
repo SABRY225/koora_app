@@ -5,6 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/models/models.dart' as md;
+import '../../core/network/api_service.dart';
+import '../../core/providers/app_state_provider.dart';
+import '../../core/providers/wallet_provider.dart';
+import '../../core/providers/ranking_provider.dart';
 import '../../core/providers/locale_provider.dart';
 import '../../core/services/sound_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -14,8 +18,14 @@ import 'final_result_screen.dart';
 class LiveGameScreen extends StatefulWidget {
   final md.Match match;
   final List<md.FootballPlayer> myTeam;
+  final String? gameId;
 
-  const LiveGameScreen({super.key, required this.match, required this.myTeam});
+  const LiveGameScreen({
+    super.key,
+    required this.match,
+    required this.myTeam,
+    this.gameId,
+  });
 
   @override
   State<LiveGameScreen> createState() => _LiveGameScreenState();
@@ -25,15 +35,9 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
   final List<md.LiveEvent> _events = [];
   Timer? _eventTimer;
   int _totalPoints = 0;
+  bool _isSettling = false;
 
-  final List<md.LiveEvent> _mockEvents = [
-    md.LiveEvent(id: '1', title: 'PASS COMPLETED', playerName: 'Pedri', pointsDelta: 1, time: '67:45'),
-    md.LiveEvent(id: '2', title: 'TACKLE WON', playerName: 'Antonio Rudiger', pointsDelta: 4, time: '68:12'),
-    md.LiveEvent(id: '3', title: 'YELLOW CARD', playerName: 'Ronald Araujo', pointsDelta: -5, time: '69:04'),
-    md.LiveEvent(id: '4', title: 'KEY ASSIST', playerName: 'Jude Bellingham', pointsDelta: 25, time: '71:22'),
-    md.LiveEvent(id: '5', title: 'GOOOAAAL!', playerName: 'Vinicius Jr', pointsDelta: 50, time: '71:22'),
-    md.LiveEvent(id: '6', title: 'CLEAN SHEET BONUS', playerName: 'Thibaut Courtois', pointsDelta: 30, time: '90:00'),
-  ];
+  late final List<md.LiveEvent> _generatedEvents;
   int _eventIndex = 0;
 
   @override
@@ -41,14 +45,102 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
     super.initState();
     _totalPoints = widget.myTeam.fold(0, (sum, p) => sum + p.currentPoints);
     SoundService().playWhistle();
+    _generateMatchEvents();
     _startLiveFeed();
   }
 
+  void _generateMatchEvents() {
+    // Generate dynamic match events based on the real players drafted by the user
+    final players = widget.myTeam;
+    final List<md.LiveEvent> events = [];
+
+    if (players.isNotEmpty) {
+      final p1 = players[0];
+      final p2 = players.length > 1 ? players[1] : p1;
+
+      // Event 1: Early buildup pass or tackle
+      if (p1.position == md.PlayerPosition.defense || p1.position == md.PlayerPosition.goalkeeper) {
+        events.add(md.LiveEvent(
+          id: '1',
+          title: 'CLEAN TACKLE',
+          playerName: p1.name,
+          pointsDelta: 10,
+          time: '18:30',
+        ));
+      } else {
+        events.add(md.LiveEvent(
+          id: '1',
+          title: 'KEY PASS',
+          playerName: p1.name,
+          pointsDelta: 8,
+          time: '24:12',
+        ));
+      }
+
+      // Event 2: Action from second player
+      if (p2.position == md.PlayerPosition.attack) {
+        events.add(md.LiveEvent(
+          id: '2',
+          title: 'SHOT ON TARGET',
+          playerName: p2.name,
+          pointsDelta: 12,
+          time: '41:05',
+        ));
+      } else {
+        events.add(md.LiveEvent(
+          id: '2',
+          title: 'INTERCEPTION',
+          playerName: p2.name,
+          pointsDelta: 8,
+          time: '43:50',
+        ));
+      }
+
+      // Event 3: Midfield play / Assist
+      events.add(md.LiveEvent(
+        id: '3',
+        title: 'KEY ASSIST',
+        playerName: p1.name,
+        pointsDelta: 20,
+        time: '65:10',
+      ));
+
+      // Event 4: Big Goal Moment
+      events.add(md.LiveEvent(
+        id: '4',
+        title: 'GOOOAAAL!',
+        playerName: (p2.position == md.PlayerPosition.attack ? p2.name : p1.name),
+        pointsDelta: 40,
+        time: '78:44',
+      ));
+
+      // Event 5: Late clean sheet / match impact bonus
+      events.add(md.LiveEvent(
+        id: '5',
+        title: 'MATCH IMPACT BONUS',
+        playerName: p2.name,
+        pointsDelta: 15,
+        time: '90+2\'',
+      ));
+    } else {
+      // Fallback using match teams
+      events.addAll([
+        md.LiveEvent(id: '1', title: 'PASS COMPLETED', playerName: widget.match.homeTeam, pointsDelta: 5, time: '22:15'),
+        md.LiveEvent(id: '2', title: 'TACKLE WON', playerName: widget.match.awayTeam, pointsDelta: 10, time: '45:00'),
+        md.LiveEvent(id: '3', title: 'KEY ASSIST', playerName: widget.match.homeTeam, pointsDelta: 20, time: '68:10'),
+        md.LiveEvent(id: '4', title: 'GOOOAAAL!', playerName: widget.match.homeTeam, pointsDelta: 40, time: '82:30'),
+        md.LiveEvent(id: '5', title: 'FULL TIME WHISTLE', playerName: 'Match Official', pointsDelta: 10, time: '90:00'),
+      ]);
+    }
+
+    _generatedEvents = events;
+  }
+
   void _startLiveFeed() {
-    _eventTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (_eventIndex < _mockEvents.length) {
-        final event = _mockEvents[_eventIndex];
-        
+    _eventTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_eventIndex < _generatedEvents.length) {
+        final event = _generatedEvents[_eventIndex];
+
         // Trigger realistic game sounds
         if (event.title.contains('GOAL') || event.title.contains('GOOOAAAL')) {
           SoundService().playGoal();
@@ -60,23 +152,71 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
 
         setState(() {
           _events.insert(0, event);
-
-          // If our drafted player was involved, award points!
           _totalPoints += event.pointsDelta;
           _eventIndex++;
         });
       } else {
         _eventTimer?.cancel();
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => FinalResultScreen(myPoints: _totalPoints)),
-            );
-          }
-        });
+        _finalizeAndSettleGame();
       }
     });
+  }
+
+  Future<void> _finalizeAndSettleGame() async {
+    setState(() {
+      _isSettling = true;
+    });
+
+    SoundService().playWhistle();
+
+    Map<String, dynamic>? gameResultData;
+
+    try {
+      final apiService = ApiService();
+      final gameId = widget.gameId;
+
+      if (gameId != null && gameId.isNotEmpty) {
+        // 1. Trigger backend settlement (awards RP, distributes Coins to wallet, calculates ranks)
+        try {
+          await apiService.post('/games/$gameId/settle', {});
+        } catch (e) {
+          debugPrint('Game settlement API call note: $e');
+        }
+
+        // 2. Fetch authoritative settlement results
+        try {
+          final res = await apiService.get('/games/$gameId/result');
+          if (res['data'] != null) {
+            gameResultData = res['data'] as Map<String, dynamic>;
+          }
+        } catch (e) {
+          debugPrint('Get game result API call note: $e');
+        }
+
+        // 3. Immediately refresh user profile, wallet balance, and rankings in background
+        if (mounted) {
+          await Future.wait([
+            context.read<AppStateProvider>().fetchUserProfile(),
+            context.read<WalletProvider>().fetchTransactions(),
+            context.read<RankingProvider>().fetchRanking(),
+          ]);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error finalizing game: $e');
+    }
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => FinalResultScreen(
+            myPoints: _totalPoints,
+            gameResult: gameResultData,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -89,6 +229,39 @@ class _LiveGameScreenState extends State<LiveGameScreen> {
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleProvider>();
     final isArabic = locale.locale.languageCode == 'ar';
+
+    if (_isSettling) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundBlack,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: AppTheme.primaryGreen),
+              const SizedBox(height: 24),
+              Text(
+                isArabic ? 'جاري احتساب النقاط وتوزيع الجوائز...' : 'CALCULATING POINTS & DISTRIBUTING REWARDS...',
+                style: GoogleFonts.oswald(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textWhite,
+                  letterSpacing: 1,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isArabic ? 'تحديث رصيد العملات ونقاط الـ RP' : 'Updating Coins & RP Rankings',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
