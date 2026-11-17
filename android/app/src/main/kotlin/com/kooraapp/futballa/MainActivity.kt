@@ -1,4 +1,4 @@
-package com.example.koora_app
+package com.kooraapp.futballa
 
 import io.flutter.embedding.android.FlutterActivity
 
